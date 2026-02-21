@@ -61,10 +61,6 @@ Python dict streaming **times out at 60 seconds** after processing only 1.7M of 
 
 ![Benchmark: 5M rows](docs/screenshots/step-3.8-benchmark-large-5m.png)
 
-The 5M row table was generated inside BigQuery using a `CROSS JOIN` — no ETL pipeline, no file uploads:
-
-![Benchmark: 5M row generation](docs/screenshots/step-3.7-generate-large-dataset-5m-crossjoin.png)
-
 ### The Decision Framework
 
 ```
