@@ -1487,7 +1487,7 @@ git commit -m "Add Dockerfile, requirements.txt, and deployment config"
 
 > 📍 **Firebase Editor for writing, Firebase Terminal for git commands, Your Browser for GitHub verification.**
 
-> **The README is more important than the code.** A reviewer reads the README before looking at source code. This is where you demonstrate systems thinking.
+> **The README is more important than the code.** A reader looks at the README before diving into source code. This is where you communicate systems thinking.
 
 ### Step 5.1 — Update the README
 📍 **Firebase Editor** (write the README in the code editor)
