@@ -34,6 +34,9 @@ data/*.csv
 # AI session files
 .claude_session_context.md
 
+# Internal planning docs (not public-facing)
+.planning/
+
 # Temp files
 nul
 *.tmp
