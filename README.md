@@ -2,7 +2,7 @@
 
 > A REST API serving structured resume data with analytics tracking, deployed on Google Cloud Run with a dual-database architecture (SQLite for operational data, BigQuery for analytical queries at scale). A self-study project exploring API design, Linux-based deployment, Python, SQL optimization, and big data at scale — with a data model inspired by digital advertising reporting patterns.
 
-**Live Demo:** `https://resume-api-711025857117.us-central1.run.app`
+**Live Demo:** [`https://resume-api-711025857117.us-central1.run.app`](https://resume-api-711025857117.us-central1.run.app) | [Interactive API Docs (Swagger)](https://resume-api-711025857117.us-central1.run.app/docs)
 **Author:** Job Seeker
 **Built With:** Firebase Studio + Gemini AI-assisted development
 **Cost:** $0.00 (Google Cloud free tier)
@@ -63,21 +63,19 @@ Python dict streaming **times out at 60 seconds** after processing only 1.7M of 
 
 ### The Decision Framework
 
-```
-Data Volume    Best Tool                  Why
-──────────     ─────────                  ───
-< 100K         Python dict/Counter        Simple, no infrastructure needed
-100K – 1M      SQLite or BigQuery         SQLite for embedded apps, BigQuery for analytics
-1M+            BigQuery (partitioned)     Push computation to the data, not data to computation
-```
+| Data Volume | Best Tool | Why It Wins at This Scale |
+|-------------|-----------|--------------------------|
+| **< 100K** | **Python dict / Counter** | A Python `dict` is a hash map — O(1) lookups per key. Data fits entirely in memory, so there's zero disk I/O or network overhead. At this scale the interpreter overhead is negligible and you avoid the startup cost of any external engine. |
+| **100K – 1M** | **SQLite** | SQLite's query engine is compiled C with B-tree indexes. It pushes aggregation (`GROUP BY`) into optimized native code instead of interpreted Python loops. The data still fits on a single machine, so there's no network latency — but the compiled engine is 5-8x faster than Python at this volume. |
+| **1M+** | **BigQuery (partitioned)** | BigQuery uses columnar storage (only scans the columns your query needs), distributes computation across many machines in parallel, and partition pruning skips entire data blocks that don't match your `WHERE` clause. At 5M rows, partitioning reduced bytes scanned by 45%. Python and SQLite are single-threaded on one machine — they can't parallelize the scan. |
 
-**The fundamental principle:** At small scale, bring data to your code (Python). At large scale, bring your code to the data (BigQuery SQL). The benchmarks make this crossover point concrete and measurable.
+**The fundamental principle:** At small scale, bring data to your code (Python hash map in memory). At large scale, bring your code to the data (BigQuery distributes your SQL across a cluster). The benchmarks make this crossover point concrete and measurable.
 
 ---
 
 ## SQL Query Progression
 
-> How query optimization changes as data volume grows — the core skill needed when advising clients on BigQuery best practices.
+> Three queries against the same 500K-row dataset in **Google BigQuery**, each progressively more optimized. This demonstrates how query design changes as data volume grows — the core skill needed when advising clients on BigQuery best practices.
 
 ### Tier 1: Naive Query (Full Table Scan)
 
