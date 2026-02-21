@@ -22,6 +22,7 @@
 - [Beyond BigQuery: Scale Discussion](#beyond-bigquery-scale-discussion)
 - [Digital Marketing Ecosystem Connection](#digital-marketing-ecosystem-connection)
 - [Linux Commands Used](#linux-commands-used)
+- [Current Scope & Future Iterations](#current-scope--future-iterations)
 - [Running Locally](#running-locally)
 - [Deployment](#deployment)
 - [Technologies Used](#technologies-used)
@@ -167,7 +168,7 @@ ORDER BY hits DESC;
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  CLIENT (Browser / curl / Postman)                       │
+│  RECRUITER / CLIENT (Browser / curl / Postman)           │
 └──────────────┬───────────────────────────────────────────┘
                │  HTTPS (TLS 1.3)
                ▼
@@ -179,16 +180,25 @@ ORDER BY hits DESC;
 │  │  ├── /analytics/*     → SQLite (operational)       │  │
 │  │  └── Middleware: CORS, Logging, Rate Limit Headers │  │
 │  └──────────┬─────────────────────────────────────────┘  │
-│             │                                            │
-│  ┌──────────▼──────────┐   ┌──────────────────────────┐  │
-│  │  SQLite             │   │  BigQuery                │  │
-│  │  (analytics.db)     │   │  (resume_analytics)      │  │
-│  │  10K rows           │   │  500K+ rows              │  │
-│  │  Operational queries│   │  Analytical queries      │  │
-│  └─────────────────────┘   └──────────────────────────┘  │
+│             │  Logs every request                        │
+│  ┌──────────▼──────────┐                                 │
+│  │  SQLite             │                                 │
+│  │  (analytics.db)     │  Operational store:             │
+│  │  10K rows           │  real-time query analytics      │
+│  └──────────┬──────────┘                                 │
+└─────────────│────────────────────────────────────────────┘
+              │  ETL batch sync (future iteration)
+              │  Currently simulated via generate_data.py
+              │  + bq load CLI
+              ▼
+┌──────────────────────────────────────────────────────────┐
+│  BIGQUERY (resume_analytics)                             │
+│  Analytical warehouse: 500K+ rows                        │
+│  3-tier SQL optimization demos                           │
+│  Scale benchmarks: 10K → 500K → 5M rows                 │
 └──────────────────────────────────────────────────────────┘
-               │
-               ▼
+              │
+              ▼
 ┌──────────────────────────────────────────────────────────┐
 │  GITHUB REPOSITORY                                       │
 │  ├── Source code + Dockerfile                            │
@@ -197,6 +207,37 @@ ORDER BY hits DESC;
 │  └── This README (design decisions & trade-offs)         │
 └──────────────────────────────────────────────────────────┘
 ```
+
+### Data Pipeline: End-to-End Flow
+
+The core idea behind this project is a **recruiter analytics pipeline** — a mock service that tracks how recruiters interact with the resume API, then makes that interaction data available for analysis at multiple scales.
+
+**The full intended flow:**
+
+```
+Recruiter hits API  →  Middleware logs request  →  SQLite (operational)  →  ETL service  →  BigQuery (analytical)
+     (source)            (capture layer)          (real-time queries)      (batch sync)     (scale analysis)
+```
+
+1. **Ingestion:** A recruiter (or any client) sends a request to any `/resume/*` or `/analytics/*` endpoint. The request logging middleware captures metadata — who asked (`recruiter_domain`), what they asked for (`endpoint_hit`, `skill_searched`), and how the system performed (`response_time_ms`, `http_status`).
+
+2. **Operational storage (SQLite):** The logged request is written to `analytics.db`, the embedded SQLite database. This powers the real-time analytics endpoints (`/analytics/queries`, `/analytics/top-domains`, `/analytics/performance`), giving immediate visibility into API usage at operational scale (~10K rows).
+
+3. **Analytical warehouse (BigQuery):** In a production system, an ETL batch job would periodically sync accumulated SQLite data into BigQuery, where it can be analyzed at 500K–5M+ row scale using optimized SQL (CTEs, window functions, partitioned/clustered tables).
+
+**What's implemented vs. simulated in this version:**
+
+| Pipeline Stage | Status | How |
+|---------------|--------|-----|
+| API endpoints + request handling | Implemented | FastAPI with 9 endpoints |
+| Request logging middleware | Implemented | Captures all request metadata |
+| SQLite operational storage | Implemented | `analytics.db` with 10K rows |
+| ETL pipeline (SQLite → BigQuery) | **Simulated** | `generate_data.py` produces realistic data matching the middleware schema; `bq load` CLI uploads it to BigQuery |
+| BigQuery analytical queries | Implemented | 3-tier SQL progression + scale benchmarks |
+
+The `generate_data.py` script is intentionally designed to produce data that mirrors exactly what the logging middleware would capture in a live system — same schema, same realistic distributions (weighted HTTP status codes, varied recruiter domains, realistic response times). This means the BigQuery analysis layer operates on data that faithfully represents what a production ETL pipeline would deliver.
+
+> **Why simulate the ETL?** Building a full ETL service (e.g., Cloud Functions triggered on a schedule, or Dataflow) would add infrastructure complexity without demonstrating additional SQL or API skills — the core focus of this project. The simulation approach lets us demonstrate the analytical layer at scale while keeping the project focused and within the $0.00 budget.
 
 ### Why These Technology Choices
 
@@ -211,11 +252,15 @@ ORDER BY hits DESC;
 
 ### How This Mirrors Real-World Technical Consulting
 
-A technical solutions consultant working with enterprise ad tech clients regularly architects this exact pattern:
-- **Operational database** (Firestore/Cloud SQL) for real-time app data
-- **Analytical database** (BigQuery) for reporting pipelines via Google Ads Data Transfer Service
-- **REST APIs** for client integrations with Google Ads, GA4, and custom measurement
-- **Cloud Run** for deploying client-facing solutions that auto-scale
+A technical solutions consultant working with enterprise ad tech clients regularly architects this exact pattern — an operational layer capturing live interactions, feeding into an analytical warehouse for reporting:
+
+- **Operational database** (Firestore/Cloud SQL) for real-time app data → *this project: SQLite capturing recruiter API interactions*
+- **ETL/ELT pipeline** connecting operational data to analytics → *this project: simulated via data generation + `bq load`; future iteration adds Cloud Functions for automated sync*
+- **Analytical database** (BigQuery) for reporting pipelines via Google Ads Data Transfer Service → *this project: BigQuery with 500K+ rows and 3-tier SQL optimization*
+- **REST APIs** for client integrations with Google Ads, GA4, and custom measurement → *this project: FastAPI with 9 endpoints serving resume + analytics data*
+- **Cloud Run** for deploying client-facing solutions that auto-scale → *this project: Docker + Cloud Run serverless deployment*
+
+The key architectural insight: in ad tech consulting, data rarely lives in one place. An advertiser's campaign data flows from Google Ads → Data Transfer Service → BigQuery → dashboards. This project mirrors that pattern: recruiter interactions → API middleware → SQLite → (ETL) → BigQuery → SQL analysis.
 
 ---
 
@@ -402,10 +447,13 @@ This project's architecture directly maps to patterns used in enterprise ad tech
 THIS PROJECT                         AD TECH CONSULTING WORK
 ─────────────                        ────────────────────────
 Resume API endpoints          ≈      Google Ads API resources
-Recruiter query analytics     ≈      Conversion tracking / measurement
+Recruiter hits → middleware   ≈      Ad impressions → conversion tracking
+  → SQLite → (ETL) → BQ        ≈      → Cloud SQL → Data Transfer → BQ
+Recruiter query analytics     ≈      Campaign performance measurement
 Domain tracking               ≈      Advertiser performance monitoring
 SQLite (operational)          ≈      Cloud SQL / Firestore (app layer)
-BigQuery (analytical)         ≈      BigQuery via Ads Data Transfer Service
+ETL simulation (future: live) ≈      Google Ads Data Transfer Service
+BigQuery (analytical)         ≈      BigQuery reporting warehouse
 Partitioned tables            ≈      Date-partitioned ad performance tables
 CTE + Window functions        ≈      Standard Ads reporting SQL patterns
 Response time monitoring      ≈      API latency SLAs for client integrations
@@ -433,6 +481,36 @@ CROSS JOIN data generation    ≈      SQL-native test data pipelines (no ETL ov
 | `bq load` | Upload data to BigQuery | Pipeline data into analytical warehouse |
 | `chmod` | Change file permissions | Secure service account key files |
 | `grep / find / cat` | File search and inspection | Debug configuration files and logs |
+
+---
+
+## Current Scope & Future Iterations
+
+This version implements the full API and analytical layers, with the ETL pipeline between them simulated. Below is what's built, what's simulated, and what future iterations would add.
+
+### What's Built
+
+- **9 REST API endpoints** with resource modeling, query parameters, and Pydantic response schemas
+- **Request logging middleware** that captures recruiter interaction metadata (domain, endpoint, skill searched, response time, status)
+- **SQLite operational database** with 10K rows powering real-time analytics endpoints
+- **BigQuery analytical warehouse** with 500K+ rows demonstrating 3-tier SQL optimization
+- **Scale benchmark suite** (10K → 500K → 5M rows) comparing Python, SQLite, and BigQuery at each scale
+- **Docker containerization** and Cloud Run deployment
+
+### What's Simulated
+
+- **ETL pipeline (SQLite → BigQuery):** The data generation script (`generate_data.py`) produces data matching the exact schema and distributions that the logging middleware would capture in production. The `bq load` CLI command simulates the batch transfer that an ETL service would perform. This lets the BigQuery analytical layer operate on realistic data without requiring ETL infrastructure.
+
+### Future Iterations
+
+| Iteration | What It Adds | Why It Matters |
+|-----------|-------------|----------------|
+| **v2: Live ETL pipeline** | Cloud Function (or Cloud Scheduler + script) that batch-syncs SQLite rows to BigQuery on a schedule | Completes the automated data pipeline — no manual `bq load` step. Demonstrates event-driven architecture. |
+| **v3: Mock API load testing** | Load test harness (e.g., Locust or `wrk`) that simulates realistic recruiter traffic patterns against the live API | Generates organic data through the full pipeline (middleware → SQLite → ETL → BigQuery) instead of synthetic generation. Validates the system under concurrency. |
+| **v4: Real-time streaming** | Replace batch ETL with Pub/Sub + Dataflow for near-real-time ingestion into BigQuery | Moves from batch to streaming architecture — relevant for ad tech clients processing real-time bidding or conversion data. |
+| **v5: Dashboard layer** | Looker Studio or Data Studio dashboard connected to BigQuery | Adds a visual reporting layer on top of the analytical warehouse — mirrors how ad tech clients consume BigQuery data. |
+
+> Each iteration adds a layer to the pipeline without changing the core API or data model. The schema was designed to support this progression — the same `recruiter_domain`, `endpoint_hit`, `skill_searched` columns that drive the SQLite analytics endpoints are the same columns that BigQuery partitions and clusters on.
 
 ---
 

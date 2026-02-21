@@ -20,7 +20,9 @@ The ad tech ecosystem increasingly relies on integrations between REST APIs, clo
 
 ### 1.3 Solution Summary
 
-Build and deploy a REST API on Google Cloud infrastructure that serves structured resume data and tracks analytics on who queries the resume. The system uses a dual-database architecture (SQLite for operational data, BigQuery for large-scale analytical queries) with a data model that intentionally mirrors Google Ads reporting patterns. The entire project runs on Google's free tier and is documented in a public GitHub repo.
+Build and deploy a REST API on Google Cloud infrastructure that serves structured resume data and tracks analytics on who queries the resume. The system is designed as a **recruiter analytics pipeline**: the API ingests recruiter interactions via request logging middleware, stores them in SQLite for real-time operational analytics, and feeds that data into BigQuery for large-scale analytical queries. The data model intentionally mirrors Google Ads reporting patterns (advertiser → campaign → keyword → performance metrics), and the dual-database architecture mirrors how enterprise ad tech clients use operational stores alongside BigQuery analytical warehouses connected by ETL pipelines.
+
+In this version, the ETL layer between SQLite and BigQuery is simulated — a data generation script produces realistic data matching the middleware schema, and `bq load` CLI uploads it to BigQuery. Future iterations would add automated ETL (Cloud Functions), mock API load testing to generate organic traffic, and streaming ingestion. The entire project runs on Google's free tier and is documented in a public GitHub repo.
 
 ### 1.4 Success Metrics
 
@@ -162,6 +164,9 @@ Build and deploy a REST API on Google Cloud infrastructure that serves structure
 | Authentication/OAuth | — | | | | X |
 | CI/CD pipeline | — | | | | X |
 | Custom domain name | — | | | | X |
+| Automated ETL (SQLite → BigQuery) | — | | | | X |
+| Mock API load testing (Locust/wrk) | — | | | | X |
+| Streaming ingestion (Pub/Sub + Dataflow) | — | | | | X |
 
 ---
 
@@ -214,11 +219,16 @@ Step 3: Tests /resume/experience?company=deloitte
   → Sees: Filtered JSON response with work experience
   → Action: Observes proper REST design, query params, status codes
 
-Step 4: Scrolls to SQL Query Progression in README
+Step 4: Reads "Data Pipeline: End-to-End Flow" section
+  → Sees: Clear narrative — API ingests recruiter hits → SQLite → (ETL) → BigQuery
+  → Action: Understands the system as a pipeline, not disconnected components
+  → Notes: ETL is explicitly marked as simulated, with future iterations documented
+
+Step 5: Scrolls to SQL Query Progression in README
   → Sees: 3 tiers with screenshots showing bytes scanned decreasing
   → Action: Understands BigQuery partitioning/clustering optimization
 
-Step 5: Reads "Digital Marketing Ecosystem Connection" section
+Step 6: Reads "Digital Marketing Ecosystem Connection" section
   → Sees: Mapping of project patterns to ad tech workflows
   → Action: Understands how project patterns map to real-world ad tech systems
 ```
@@ -271,10 +281,15 @@ Step 5: Reads "Digital Marketing Ecosystem Connection" section
 
 ```
 Firebase Studio (Dev) → Docker Container → Cloud Run (Prod)
-                                              ├── FastAPI app
-                                              ├── SQLite (embedded)
-                                              └── BigQuery client (external)
+                                              ├── FastAPI app (9 endpoints)
+                                              ├── Request logging middleware
+                                              ├── SQLite (embedded, operational)
+                                              │     ↓  (future: ETL batch sync)
+                                              │     ↓  (current: simulated via generate_data.py + bq load)
+                                              └── BigQuery (analytical warehouse)
 ```
+
+**Data pipeline flow:** Recruiter hits API → middleware logs request metadata → SQLite stores for real-time analytics → (ETL) → BigQuery enables analysis at 500K–5M+ row scale. The ETL layer is simulated in v1; future iterations add automated sync and load testing.
 
 ### 6.2 Integration Requirements
 
@@ -399,6 +414,7 @@ Firebase Studio (Dev) → Docker Container → Cloud Run (Prod)
 | Should the API connect to BigQuery directly, or keep BQ as a separate demo? | Author | **Decided:** BQ stays as a separate demo — benchmark scripts compare approaches outside the API |
 | Should there be a `/analytics/compare` endpoint that queries both SQLite and BQ? | Author | **Decided:** No — the scale benchmark scripts (benchmark_small/medium/large.py) serve this comparison purpose more effectively than an API endpoint |
 | Should Tier 3 scale to 50M rows using CROSS JOIN? | Author | **Decided:** Scale to 5M rows via CROSS JOIN (500K × 10). 5M is sufficient to demonstrate partition pruning and the Python→BigQuery crossover. See Steps 3.7-3.8 in the implementation guide |
+| Should the ETL pipeline (SQLite → BigQuery) be fully implemented in v1? | Author | **Decided:** No — simulate via `generate_data.py` + `bq load`. The ETL infrastructure (Cloud Functions, scheduling) adds complexity without demonstrating additional SQL/API skills. Future iterations (v2) add automated ETL; v3 adds load testing to generate organic data through the full pipeline. |
 
 ---
 
