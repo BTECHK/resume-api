@@ -1,0 +1,7 @@
+cat > ~/resume-api/.gcloudignore << 'EOF'                                            .git
+.venv/                                                                               __pycache__/                                                
+*.py[cod]
+data/*.csv
+*.log
+.env
+EOF
