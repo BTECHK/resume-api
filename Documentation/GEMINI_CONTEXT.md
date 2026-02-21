@@ -20,7 +20,7 @@ The full project has 5 phases:
 4. Deploy to Cloud Run (Docker build, gcloud deploy)
 5. GitHub + README (documentation, screenshots, design decisions)
 
-**I am working through these phases one step at a time with an external coach. I will tell you which step I'm on and what I need you to do. Do not skip ahead, combine steps, or implement future phases.**
+**I am working through these phases one step at a time. Architecture decisions are informed by both Gemini and Claude. I will tell you which step I'm on and what I need you to do. Do not skip ahead, combine steps, or implement future phases.**
 
 ## Roles & Responsibilities
 
