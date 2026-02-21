@@ -1,7 +1,7 @@
 [project]
-name = "myapp"
-version = "0.1.0"
-description = "Add your description here"
+name = "resume-api"
+version = "1.0.0"
+description = "REST API serving structured resume data with analytics tracking, dual-database architecture (SQLite + BigQuery), deployed on Google Cloud Run"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
