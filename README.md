@@ -103,7 +103,7 @@ The API follows REST conventions — resources are nouns, HTTP methods are verbs
 **Why separate endpoints instead of one monolithic `/resume`?**
 
 This was a deliberate design decision. A single endpoint returning everything is simpler, but:
-1. **Clients rarely need everything.** A recruiter scanning skills doesn't need education history.
+1. **Clients rarely need everything.** Someone browsing skills doesn't need education history.
 2. **Bandwidth efficiency.** Mobile clients or rate-limited integrations benefit from smaller payloads.
 3. **Caching granularity.** Skills change less often than experience — separate resources allow different cache TTLs.
 4. **This mirrors Google Ads API design.** The Google Ads API uses separate resource endpoints (`/campaigns`, `/adGroups`, `/keywords`) rather than one giant response — for the same reasons.
