@@ -39,17 +39,17 @@ Build and deploy a REST API on Google Cloud infrastructure that serves structure
 
 ### 2.1 Primary User Persona
 
-**Name:** Alex — Technical Evaluation Lead
-**Segment:** Engineering or solutions leader evaluating technical candidates
+**Name:** The Technical Reader
+**Segment:** Engineer, architect, or technical lead exploring ad tech portfolio projects
 
 **Jobs to be Done:**
 
 | Job Type | Job Statement | Priority |
 |----------|---------------|----------|
-| Functional | Assess whether this person can design and deploy a technical solution end-to-end | P0 |
-| Functional | Evaluate SQL proficiency across naive, optimized, and scale-aware query patterns | P0 |
-| Functional | Determine if the person understands how web tech integrates with the digital advertising ecosystem | P0 |
-| Emotional | Feel confident this person can ramp quickly on hands-on technical work | P1 |
+| Functional | Understand how a REST API can be designed and deployed end-to-end on Google Cloud | P0 |
+| Functional | See SQL proficiency demonstrated across naive, optimized, and scale-aware query patterns | P0 |
+| Functional | Learn how web tech integrates with the digital advertising ecosystem | P0 |
+| Emotional | Feel inspired to build a similar portfolio project or apply these patterns | P1 |
 
 ### 2.2 Secondary User Persona
 
@@ -66,8 +66,8 @@ Build and deploy a REST API on Google Cloud infrastructure that serves structure
 
 ### 2.3 Anti-Personas (Who This Is NOT For)
 
-- **End users / general public** — This is not a production application; it's a skills demonstration
-- **Recruiters looking for an actual resume site** — The API serves data, not a pretty frontend
+- **End users / general public** — This is not a production application; it's a learning project
+- **Non-technical visitors looking for an actual resume site** — The API serves data, not a pretty frontend
 - **Anyone expecting enterprise-grade security** — Authentication, encryption at rest, etc. are discussed in the README but not implemented (portfolio scope)
 
 ---
@@ -91,15 +91,15 @@ Build and deploy a REST API on Google Cloud infrastructure that serves structure
 
 | ID | User Story | Acceptance Criteria | Priority |
 |----|------------|---------------------|----------|
-| US-001 | As a reviewer, I want to hit GET /resume and receive structured JSON so I can see proper resource modeling | - Returns 200 with valid JSON | P0 |
+| US-001 | As a technical reader, I want to hit GET /resume and receive structured JSON so I can see proper resource modeling | - Returns 200 with valid JSON | P0 |
 | | | - JSON has sections: summary, experience, skills, education, certifications | |
-| US-002 | As a reviewer, I want to hit GET /resume/experience?company=deloitte so I can see query parameter filtering works | - Filters results to Deloitte entries only | P0 |
+| US-002 | As a technical reader, I want to hit GET /resume/experience?company=deloitte so I can see query parameter filtering works | - Filters results to Deloitte entries only | P0 |
 | | | - Returns 200 with filtered array | |
-| US-003 | As a reviewer, I want to see GET /resume/skills?category=databases return grouped skills | - Groups by category | P0 |
+| US-003 | As a technical reader, I want to see GET /resume/skills?category=databases return grouped skills | - Groups by category | P0 |
 | | | - Returns count metadata | |
-| US-004 | As a reviewer, I want to see GET /analytics/top-domains use a Python dictionary frequency map | - Code comments show dict-based approach AND Counter approach | P0 |
+| US-004 | As a technical reader, I want to see GET /analytics/top-domains use a Python dictionary frequency map | - Code comments show dict-based approach AND Counter approach | P0 |
 | | | - Response includes method and complexity info | |
-| US-005 | As a reviewer, I want to see the auto-generated /docs page | - Swagger UI loads at /docs | P1 |
+| US-005 | As a technical reader, I want to see the auto-generated /docs page | - Swagger UI loads at /docs | P1 |
 | | | - All endpoints documented with schemas | |
 
 **Epic 2: Data Generation**
@@ -116,11 +116,11 @@ Build and deploy a REST API on Google Cloud infrastructure that serves structure
 
 | ID | User Story | Acceptance Criteria | Priority |
 |----|------------|---------------------|----------|
-| US-008 | As a reviewer, I want to see a naive full-table-scan query with documented bytes processed | - Query runs in BigQuery console | P0 |
+| US-008 | As a technical reader, I want to see a naive full-table-scan query with documented bytes processed | - Query runs in BigQuery console | P0 |
 | | | - Screenshot shows bytes scanned | |
-| US-009 | As a reviewer, I want to see an optimized query using CTEs, window functions, SAFE_DIVIDE | - Uses CTE, RANK(), SAFE_DIVIDE, COUNTIF | P0 |
+| US-009 | As a technical reader, I want to see an optimized query using CTEs, window functions, SAFE_DIVIDE | - Uses CTE, RANK(), SAFE_DIVIDE, COUNTIF | P0 |
 | | | - Shows bytes improvement vs Tier 1 | |
-| US-010 | As a reviewer, I want to see partitioned + clustered table with dramatic scan reduction | - Table partitioned by DATE(timestamp) | P0 |
+| US-010 | As a technical reader, I want to see partitioned + clustered table with dramatic scan reduction | - Table partitioned by DATE(timestamp) | P0 |
 | | | - Clustered by recruiter_domain, endpoint_hit | |
 | | | - Bytes scanned drops significantly | |
 
@@ -137,7 +137,7 @@ Build and deploy a REST API on Google Cloud infrastructure that serves structure
 
 | ID | User Story | Acceptance Criteria | Priority |
 |----|------------|---------------------|----------|
-| US-013 | As a reviewer, I want to read the README and understand the full architecture in under 2 minutes | - Architecture diagram present | P0 |
+| US-013 | As a technical reader, I want to read the README and understand the full architecture in under 2 minutes | - Architecture diagram present | P0 |
 | | | - Design decisions explained with trade-offs | |
 | | | - Ad tech ecosystem mapping included | |
 
@@ -202,7 +202,7 @@ Build and deploy a REST API on Google Cloud infrastructure that serves structure
 ### 4.2 Primary User Flow
 
 ```
-Step 1: Reviewer opens GitHub repo
+Step 1: Reader opens GitHub repo
   → Sees: README with architecture diagram and design decisions
   → Action: Reads for 1-2 minutes, understands the system
 
@@ -212,15 +212,15 @@ Step 2: Clicks live Cloud Run URL
 
 Step 3: Tests /resume/experience?company=deloitte
   → Sees: Filtered JSON response with work experience
-  → Action: Notes proper REST design, query params, status codes
+  → Action: Observes proper REST design, query params, status codes
 
 Step 4: Scrolls to SQL Query Progression in README
   → Sees: 3 tiers with screenshots showing bytes scanned decreasing
-  → Action: Recognizes BigQuery partitioning/clustering knowledge
+  → Action: Understands BigQuery partitioning/clustering optimization
 
-Step 5: Reviews "Digital Marketing Ecosystem Connection" section
+Step 5: Reads "Digital Marketing Ecosystem Connection" section
   → Sees: Mapping of project patterns to ad tech workflows
-  → Action: Understands builder connects technical skills to domain
+  → Action: Understands how project patterns map to real-world ad tech systems
 ```
 
 ### 4.3 Edge Cases & Error Handling
@@ -308,7 +308,7 @@ Firebase Studio (Dev) → Docker Container → Cloud Run (Prod)
 | Interface | Purpose | Key Elements | Priority |
 |-----------|---------|--------------|----------|
 | FastAPI Swagger UI (/docs) | Interactive API documentation | Try-it-out buttons, schema display | P1 |
-| GitHub README | Primary interface for reviewers | Architecture diagram, design decisions, screenshots | P0 |
+| GitHub README | Primary interface for technical readers | Architecture diagram, design decisions, screenshots | P0 |
 | curl / terminal output | Demonstration of working endpoints | JSON responses with proper formatting | P0 |
 
 ---
@@ -406,7 +406,7 @@ Firebase Studio (Dev) → Docker Container → Cloud Run (Prod)
 
 ### 14.1 References
 
-- Role context: Technical Solutions roles in ad tech / data engineering
+- Domain context: Technical solutions work in ad tech / data engineering
 - Study resources: API design, Linux, Python, SQL guides
 - Firebase Studio research: Billing vs. no-billing comparison and implementation plans
 
