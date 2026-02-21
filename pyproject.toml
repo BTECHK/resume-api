@@ -1,0 +1,13 @@
+[project]
+name = "myapp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "faker>=40.4.0",
+    "fastapi>=0.129.0",
+    "google-cloud-bigquery>=3.40.1",
+    "pandas>=3.0.1",
+    "uvicorn[standard]>=0.41.0",
+]
