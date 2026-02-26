@@ -525,7 +525,7 @@ cd resume-api
 pip install -r requirements.txt
 
 # Generate sample data
-python data/generate_data.py
+python scripts/generate_data.py
 
 # Start the API server
 cd api && uvicorn main:app --host 0.0.0.0 --port 8000 --reload
