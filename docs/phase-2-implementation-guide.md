@@ -160,7 +160,7 @@ gcloud config get-value project
 
 > **If BigQuery is empty:** Re-upload from Phase 1:
 > ```bash
-> uv run -- python data/generate_data.py
+> uv run -- python scripts/generate_data.py
 > bq load --source_format=CSV --autodetect --skip_leading_rows=1 \
 >   resume_analytics.recruiter_queries data/recruiter_queries.csv
 > ```
@@ -174,7 +174,7 @@ gcloud config get-value project
 > Before building new infrastructure, add a Quick Start section to your Phase 1 guide so anyone (including future-you) can restart the existing deployment fast.
 
 ### Step 6.1 — Append Quick Start to Implementation Guide
-📍 **Firebase Editor** — open `Documentation/Resume API — Complete Implementation Guide.md`
+📍 **Firebase Editor** — open `docs/implementation-guide.md`
 
 Scroll to the end of the guide (before the CLEANUP section if present). Add this new section:
 
@@ -255,7 +255,7 @@ curl -s "$BASE_URL/analytics/performance" | python3 -m json.tool
 📍 **Firebase Terminal**
 
 ```bash
-git add "Documentation/Resume API — Complete Implementation Guide.md"
+git add "docs/implementation-guide.md"
 git commit -m "Add Quick Start restart section to Phase 1 guide"
 ```
 
@@ -412,7 +412,7 @@ ls -la api/ data/ sql/
 **PROMPT TO COPY (paste into Gemini):**
 
 ```
-Read GEMINI_CONTEXT.md first. Then create docker-compose.yml at the repo root.
+Read docs/gemini-context.md first. Then create docker-compose.yml at the repo root.
 
 This is a Phase 2 addition. Do NOT modify any existing Phase 1 files.
 
@@ -465,7 +465,7 @@ Each grep should print at least one line. If any prints nothing, tell Gemini wha
 **PROMPT TO COPY:**
 
 ```
-Read GEMINI_CONTEXT.md first. Create api/Dockerfile — this is SEPARATE from the root
+Read docs/gemini-context.md first. Create api/Dockerfile — this is SEPARATE from the root
 Dockerfile (which is for Cloud Run). This new Dockerfile is for Docker Compose.
 
 Use a multi-stage build:
@@ -523,7 +523,7 @@ cat api/requirements.txt
 **PROMPT TO COPY:**
 
 ```
-Read GEMINI_CONTEXT.md first. Create two files:
+Read docs/gemini-context.md first. Create two files:
 
 1. .env.example at repo root — template showing all environment variables for Phase 2:
 
@@ -739,7 +739,7 @@ If the API responds after reboot, auto-start is working.
 **PROMPT TO COPY:**
 
 ```
-Read GEMINI_CONTEXT.md first. I need to enhance the request logging system for Phase 2.
+Read docs/gemini-context.md first. I need to enhance the request logging system for Phase 2.
 This captures live recruiter funnel data that will be synced to BigQuery by an ETL pipeline.
 
 OVERVIEW: The middleware captures every API request and tags it with recruiter session
@@ -898,7 +898,7 @@ These two POST endpoints complete the recruiter interaction funnel. They represe
 **PROMPT TO COPY:**
 
 ```
-Read GEMINI_CONTEXT.md first. Add 2 new POST endpoints and their Pydantic models.
+Read docs/gemini-context.md first. Add 2 new POST endpoints and their Pydantic models.
 
 Add to api/models.py:
 
@@ -1076,7 +1076,7 @@ conn.close()
 **PROMPT TO COPY:**
 
 ```
-Read GEMINI_CONTEXT.md first. Create a Locust-based traffic simulator for Phase 2.
+Read docs/gemini-context.md first. Create a Locust-based traffic simulator for Phase 2.
 
 IMPORTANT CONTEXT: The traffic simulator runs from GCP Cloud Shell, NOT on the same
 VM as the API. It hits the API's public IP over the real internet. This is intentional —
@@ -1478,7 +1478,7 @@ gcloud compute scp /path/to/downloaded-key.json resume-api-vm:~/resume-api/crede
 **PROMPT TO COPY:**
 
 ```
-Read GEMINI_CONTEXT.md first. Create the ETL pipeline for Phase 2.
+Read docs/gemini-context.md first. Create the ETL pipeline for Phase 2.
 
 This pipeline syncs live request data from SQLite (captured by middleware) to BigQuery
 (for analytical queries). It runs every 6 hours using APScheduler.
@@ -1579,7 +1579,7 @@ grep -n 'WRITE_APPEND' etl/sqlite_to_bigquery.py
 **PROMPT TO COPY:**
 
 ```
-Read GEMINI_CONTEXT.md first. Update docker-compose.yml to add the etl service.
+Read docs/gemini-context.md first. Update docker-compose.yml to add the etl service.
 
 Add this service AFTER the existing api service:
 
@@ -1980,7 +1980,7 @@ If you want to expose pipeline analytics through the API:
 **PROMPT TO COPY:**
 
 ```
-Read GEMINI_CONTEXT.md first. Add 3 new API endpoints that query BigQuery pipeline data.
+Read docs/gemini-context.md first. Add 3 new API endpoints that query BigQuery pipeline data.
 
 Create api/analytics_bigquery.py:
 - Uses google.cloud.bigquery.Client()
@@ -2178,7 +2178,7 @@ bq query --use_legacy_sql=false \
 
 ```bash
 # Add any remaining files
-git add sql/ Documentation/
+git add sql/ docs/
 git commit -m "Complete Phase 2: end-to-end data pipeline"
 git push
 ```

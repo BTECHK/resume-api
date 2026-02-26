@@ -75,19 +75,39 @@ The full project has 5 phases:
 ```
 ~/resume-api/
 ├── api/
-│   ├── main.py          # FastAPI app — endpoints + resume data + middleware
+│   ├── __init__.py       # Explicit package declaration
+│   ├── main.py           # FastAPI app — endpoints + resume data + middleware
 │   ├── models.py         # Pydantic response models (validation schemas)
 │   └── database.py       # SQLite connection (DATABASE_FILE = "data/analytics.db")
+├── benchmarks/           # Performance benchmarks (Python vs SQLite vs BigQuery)
+│   ├── __init__.py
+│   ├── benchmark_small.py
+│   ├── benchmark_medium.py
+│   └── benchmark_large.py
 ├── data/
-│   ├── generate_data.py  # Creates fake analytics data (10K SQLite + 500K CSV)
 │   ├── analytics.db      # SQLite database (10,000 rows in api_queries table)
-│   └── recruiter_queries.csv  # 500K rows for BigQuery upload
-├── sql/                  # BigQuery SQL queries (Tier 1, 2, 3)
+│   ├── recruiter_queries.csv  # 500K rows for BigQuery upload
+│   └── sql/              # BigQuery SQL queries (Tier 1, 2, 3)
+├── docs/
+│   ├── gemini-context.md # This file
+│   ├── implementation-guide.md
+│   ├── phase-2-implementation-guide.md
+│   ├── phase-2-approach.md
+│   ├── bug-fix-log.md
+│   ├── PRD.md
+│   └── screenshots/
+├── scripts/              # Operational scripts (run from project root)
+│   ├── __init__.py
+│   ├── generate_data.py  # Creates fake analytics data (10K SQLite + 500K CSV)
+│   ├── check_db.py
+│   └── clean_db.py
+├── tests/                # Test directory
+│   ├── __init__.py
+│   └── conftest.py
 ├── .idx/
 │   └── dev.nix           # LOCKED — do NOT read or modify (git-protected)
 ├── Dockerfile            # Uses python:3.11-slim, pip install, port 8080
 ├── pyproject.toml        # Dependencies managed by uv
-├── GEMINI_CONTEXT.md     # This file
 └── README.md
 ```
 
@@ -95,7 +115,7 @@ The full project has 5 phases:
 
 ### Data Flow
 ```
-data/generate_data.py
+scripts/generate_data.py
   ├─→ writes to: data/analytics.db (table: api_queries, 10K rows)
   └─→ writes to: data/recruiter_queries.csv (500K rows)
 
@@ -160,7 +180,7 @@ data/recruiter_queries.csv
 | Resume data in `api/main.py` | Restart uvicorn (auto if `--reload` is on) |
 | `api/models.py` (Pydantic schemas) | Restart uvicorn AND check that main.py still matches |
 | `api/database.py` (DB path or schema) | Restart uvicorn AND verify analytics endpoints still work |
-| `data/generate_data.py` | Re-run it: `uv run -- python data/generate_data.py` |
+| `scripts/generate_data.py` | Re-run it: `uv run -- python scripts/generate_data.py` |
 | `pyproject.toml` (dependencies) | Run `uv sync` to install, then restart uvicorn |
 | Dockerfile | Rebuild: `docker build -t resume-api .` |
 | Any code, then want it in production | Rebuild Docker image AND redeploy to Cloud Run |
