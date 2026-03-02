@@ -1,6 +1,8 @@
 # Resume API — Technical Portfolio Project
 
-> A REST API serving structured resume data with analytics tracking, deployed on Google Cloud Run with a dual-database architecture (SQLite for operational data, BigQuery for analytical queries at scale). A self-study project exploring API design, Linux-based deployment, Python, SQL optimization, and big data at scale — with a data model inspired by digital advertising reporting patterns.
+![CI](https://github.com/BTECHK/resume-api/actions/workflows/ci.yml/badge.svg)
+
+> A production-grade REST API serving structured resume data with analytics tracking, Infrastructure as Code (Terraform), CI/CD automation (GitHub Actions), AI-powered resume Q&A (Gemini + RAG), and comprehensive security tooling — deployed on Google Cloud with a dual-database architecture (SQLite for operational data, BigQuery for analytical queries at scale). A self-study project exploring API design, IaC, DevSecOps, AI/LLM integration, and cloud deployment — with a data model inspired by digital advertising reporting patterns.
 
 **Live Demo:** [`https://resume-api-711025857117.us-central1.run.app`](https://resume-api-711025857117.us-central1.run.app) | [Interactive API Docs (Swagger)](https://resume-api-711025857117.us-central1.run.app/docs)
 **Author:** Job Seeker
@@ -12,6 +14,7 @@
 ## Table of Contents
 
 - [Purpose](#purpose)
+- [Project Phases](#project-phases)
 - [Key Findings: When Tool Choice Matters](#key-findings-when-tool-choice-matters)
 - [SQL Query Progression](#sql-query-progression)
 - [Architecture](#architecture)
@@ -26,6 +29,34 @@
 - [Running Locally](#running-locally)
 - [Deployment](#deployment)
 - [Technologies Used](#technologies-used)
+- [Security](#security)
+
+---
+
+## Project Phases
+
+This project was built incrementally across three phases, each adding a layer of complexity:
+
+### Phase 1: Core API + Analytics ✅
+
+REST API with 9 endpoints, SQLite operational database, BigQuery analytical warehouse, 3-tier SQL progression (naive → optimized → partitioned), scale benchmarks (10K → 500K → 5M rows), Docker + Cloud Run deployment.
+
+[Phase 1 Implementation Guide](docs/implementation-guide.md)
+
+### Phase 2: End-to-End Data Pipeline ✅
+
+Docker Compose persistent hosting on e2-micro VM, enhanced request logging middleware, Locust traffic simulation (200K rows burst mode), automated ETL (SQLite → BigQuery via APScheduler), BigQuery analytics queries.
+
+[Phase 2 Implementation Guide](docs/phase-2-implementation-guide.md)
+
+### Phase 3: IaC + CI/CD + AI + Security ✅
+
+- **Infrastructure as Code** — All GCP resources (VPC, firewall, IAM, Cloud Run, VM, BigQuery, Artifact Registry) managed via Terraform modules with GCS remote state
+- **CI/CD Pipeline** — GitHub Actions: Ruff lint → Bandit SAST → pip-audit SCA → pytest → Docker build → deploy
+- **AI Feature** — Gemini 2.5 Flash-powered RAG for resume Q&A: HuggingFace embeddings → Chroma vector DB → grounded generation
+- **Security** — OWASP API Security Top 10 alignment, threat model, security headers middleware, rate limiting, Trivy/Bandit/pip-audit scanning in CI
+
+[Phase 3 Implementation Guide](docs/phase-3-implementation-guide.md) | [Architecture Diagram](docs/architecture-diagram.md) | [Security Policy](SECURITY.md)
 
 ---
 
@@ -347,6 +378,23 @@ These are informational in this demo (not enforced server-side), but demonstrate
 | `GET` | `/analytics/top-domains` | Top N domains by hit count | `?n=` (default 10) |
 | `GET` | `/analytics/performance` | Response time percentiles (p50, p95, p99) | — |
 
+### AI Endpoints (Phase 3)
+
+| Method | Endpoint | Description | Body |
+|--------|----------|-------------|------|
+| `POST` | `/ai/ask` | Ask questions about the resume using RAG | `{"question": "What databases has the candidate used?"}` |
+| `POST` | `/ai/skills/match` | Match resume skills against a job description | `{"job_description": "Looking for Python and SQL experience..."}` |
+
+### Example Response: `POST /ai/ask`
+
+```json
+{
+  "answer": "The candidate has experience with PostgreSQL, Oracle, T-SQL, SQLite, and BigQuery...",
+  "sources": ["experience_section", "skills_section"],
+  "model": "gemini-2.5-flash"
+}
+```
+
 ### Example Response: `GET /resume/skills?keyword=sql`
 
 ```json
@@ -569,10 +617,34 @@ gcloud run deploy resume-api \
 | Docker | Containerization | Latest |
 | Cloud Run | Serverless hosting | Google Cloud |
 | Firebase Studio | Development environment | Google Cloud |
+| Terraform | Infrastructure as Code | Latest |
+| GitHub Actions | CI/CD automation | N/A |
+| LangChain | AI orchestration (RAG pipeline) | Latest |
+| ChromaDB | Vector database for similarity search | Latest |
+| Gemini 2.5 Flash | AI text generation | Google AI |
+| HuggingFace Transformers | Local embeddings (all-MiniLM-L6-v2) | Latest |
+| Trivy | Container + IaC security scanning | Latest |
+| Bandit | Python SAST (static analysis) | Latest |
+| pip-audit | Python dependency vulnerability scanning | Latest |
+| Ruff | Python linting (fast, replaces flake8/isort) | Latest |
+| Locust | Load testing / traffic simulation | Latest |
 | Faker | Test data generation | Latest |
 | Pandas | Data manipulation | Latest |
 | google-cloud-bigquery | BigQuery Python client (used in scale benchmarks) | Latest |
 | tracemalloc | Memory profiling (built-in, used in benchmarks) | Built-in |
+
+---
+
+## Security
+
+This project follows OWASP API Security Top 10 (2023) guidelines. See [SECURITY.md](SECURITY.md) for:
+
+- **Threat model** — Assets, threat actors, and attack vectors with mitigations
+- **Security controls** — Application, infrastructure, and CI/CD layer controls
+- **OWASP mapping** — How each API Security risk is addressed
+- **Vulnerability disclosure** — How to report security issues
+
+Security scanning runs automatically in CI via GitHub Actions (Bandit, pip-audit, Trivy).
 
 ---
 
