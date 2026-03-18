@@ -1,0 +1,34 @@
+# Defines the services that make up the application.
+services:
+  # The main API service.
+  api:
+    # Configuration for building the Docker image for the API service.
+    build:
+      # The build context is the 'api' directory.
+      context: ./api
+      # The Dockerfile to use for building the image.
+      dockerfile: Dockerfile
+    # Maps port 8080 on the host to port 8080 in the container.
+    ports:
+      - "8080:8080"
+    # Mounts the host's './data' directory to '/app/data' in the container.
+    volumes:
+      - ./data:/app/data
+    # Sets environment variables inside the container.
+    environment:
+      - DATABASE_PATH=/app/data/queries.db
+    # Configures the restart policy for the container.
+    # 'unless-stopped' means the container will restart automatically unless it is manually stopped.
+    restart: unless-stopped
+    # Defines a health check to determine if the container is healthy.
+    healthcheck:
+      # The command to run to check the health of the container.
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      # The time between health checks.
+      interval: 30s
+      # The maximum time to wait for a health check to complete.
+      timeout: 10s
+      # The number of times to retry a failed health check before marking the container as unhealthy.
+      retries: 3
+      # The time to wait before starting the health checks.
+      start_period: 10s
