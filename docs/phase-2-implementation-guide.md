@@ -113,6 +113,13 @@ Phase 2 adds a new environment — the e2-micro VM. Watch for these tags:
 
 > **New in Phase 2:** Most development still happens in Firebase Studio. Deployment and verification happen on the VM. Traffic simulation runs from Cloud Shell — a separate machine so traffic travels over the real internet to reach your API.
 
+> **⚠️ Git Sync Rule — ALWAYS pull before you work:**
+> Phase 2 uses multiple environments (Firebase Studio, VM, local laptop). Each has its own copy of the repo. Before making changes in ANY environment, always run `git pull origin main` first. Otherwise you'll create divergent branches that require manual merging. The workflow is always:
+> 1. `git pull origin main` — get the latest
+> 2. Make your changes
+> 3. `git add` → `git commit` → `git push`
+> 4. Switch to the other environment → `git pull origin main`
+
 ---
 
 ## PRE-FLIGHT CHECKLIST
@@ -1028,6 +1035,20 @@ grep -n 'allow_methods' api/main.py
 # Expected: ["GET", "POST"]
 ```
 
+**🛠️ Common Gemini Issue — Bad Starlette Import:**
+
+If Gemini generates `from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseCall`, remove `RequestResponseCall` — it doesn't exist in most starlette versions. The fix:
+
+```python
+# ❌ Gemini might generate this:
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseCall
+
+# ✅ Correct:
+from starlette.middleware.base import BaseHTTPMiddleware
+```
+
+Also remove the `RequestResponseCall` type hint from the `dispatch` method signature — just use `call_next` without a type annotation.
+
 Also create the `__init__.py` for the middleware package:
 
 ```bash
@@ -1124,9 +1145,11 @@ grep -n '/resume/shortlist' api/main.py
 ### Step 8.3 — Test Middleware Locally
 📍 **Firebase Terminal**
 
+> **⚠️ Important:** You must run uvicorn from inside the `api/` directory, not from the repo root. This is because `main.py` uses absolute imports (`import models`, `import database`) that only resolve when Python's working directory is `api/`. Running `uvicorn api.main:app` from the repo root will fail with `ModuleNotFoundError: No module named 'models'`.
+
 ```bash
-# Start the API
-cd ~/resume-api && uv run -- python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 &
+# Start the API — MUST cd into api/ first for absolute imports to work
+cd ~/resume-api/api && uv run -- python -m uvicorn main:app --host 0.0.0.0 --port 8000 &
 sleep 2
 
 # Hit some endpoints to generate log entries
