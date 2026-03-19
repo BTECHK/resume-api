@@ -1,6 +1,6 @@
 # ---- Stage 1: Builder ----
 # Install dependencies in an isolated virtual environment
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Create a virtual environment 
 RUN python -m venv /opt/venv

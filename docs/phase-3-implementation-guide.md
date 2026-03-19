@@ -166,6 +166,17 @@ git remote -v
 > Terraform is Infrastructure as Code — you describe what infrastructure you want in `.tf` files, and Terraform creates/updates/destroys it to match. This phase creates the Terraform project structure, configures remote state in a GCS bucket, and builds the foundational modules (networking and IAM) that all other resources depend on.
 >
 > 📍 **All of Phase 14 happens in Firebase Studio (editor + terminal) and GCP Console (bucket creation).**
+>
+> 🛠️ **Build approach:** All Terraform files, CI/CD configs, and linting configs in Phase 3 are **built by hand** — you'll create each file yourself following step-by-step instructions. This builds the muscle memory needed for DevOps/platform engineering roles. Python code (RAG pipeline, security middleware) is provided as copy-paste blocks since that's not the focus.
+
+> **🧠 ELI5 — How Terraform fits into the project:**
+> In Phase 2, you created your VM by clicking through the GCP Console — choosing machine type, region, firewall rules, etc. That works, but it's manual, unrepeatable, and undocumented. Terraform codifies all of that into `.tf` files. If your VM dies, you run `terraform apply` and everything comes back exactly as defined. In interviews, this demonstrates you understand infrastructure lifecycle management — not just "I clicked some buttons."
+>
+> **The file structure:**
+> - **`environments/`** = WHERE to deploy (dev vs prod — different settings, same infrastructure pattern)
+> - **`modules/`** = WHAT to deploy (reusable building blocks — networking, IAM, compute)
+> - Each module has 3 files: `variables.tf` (inputs), `main.tf` (resources), `outputs.tf` (return values)
+> - Think of modules like functions: they take inputs, create resources, and return outputs that other modules can use
 
 ### Step 14.1 — Install Terraform in Firebase Studio
 📍 **Firebase Terminal**
@@ -870,6 +881,17 @@ cd terraform/environments/dev && terraform validate && cd ../../..
 > Every push to your repo will now trigger an automated pipeline: lint your code, scan for security issues, run tests, build containers, and deploy — all for free on GitHub Actions (unlimited minutes for public repos).
 >
 > 📍 **Code in Firebase Studio. Configuration in GitHub web UI (for secrets).**
+>
+> 🛠️ **Build approach:** All CI/CD workflow files, linter configs, and pre-commit configs are **built by hand** following the instructions below.
+
+> **🧠 ELI5 — How CI/CD fits in:**
+> Right now your workflow is: edit code → `git push` → SSH into VM → `git pull` → `docker compose up`. CI/CD automates everything after the push. GitHub Actions watches your repo — when you push, it spins up a temporary server, runs your linter, scans for security issues, runs tests, and can even deploy to your VM. If anything fails, the pipeline stops and tells you what broke. In production teams, PRs can't merge until the pipeline passes — this prevents broken code from reaching users.
+>
+> **The files you'll create:**
+> - **`ci.yml`** = the main pipeline (lint → test → build → deploy)
+> - **`security.yml`** = a dedicated security scanner (container vulnerabilities, Dockerfile linting)
+> - **`ruff.toml`** = Python linter config (what rules to enforce)
+> - **`.pre-commit-config.yaml`** = local hooks that catch issues before you even push
 
 ### Step 15.1 — Create GitHub Actions Directory
 📍 **Firebase Terminal**

@@ -565,6 +565,10 @@ ENDPOINTS (REST design):
    - Simulates API health monitoring
 
 TECHNICAL REQUIREMENTS:
+- Use ABSOLUTE imports (not relative) when importing between files in api/:
+  Use `import models` and `import database`, NOT `from . import models`
+  Reason: In Phase 2, Docker runs main.py as a standalone module via
+  `uvicorn main:app`, and relative imports fail without a parent package.
 - Use Pydantic models for all request/response schemas (in api/models.py)
 - Use SQLite database for the analytics data (connection in api/database.py)
 - The analytics endpoints (/analytics/queries, /analytics/top-domains, /analytics/performance)

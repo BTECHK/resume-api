@@ -619,29 +619,46 @@ docker compose up --build -d
 ### Step 7.7 — Create .env.example and systemd Service
 📍 **Firebase Editor** (build by hand)
 
-**File 1: Create `.env.example` at repo root**
+**File 1: Understand `.env` vs `.env.example`**
 
-> **🧠 ELI5 — What is .env?** Environment variables are settings your app reads at runtime — database paths, API keys, project IDs. Instead of hardcoding them in your Python code, you put them in a `.env` file. Docker Compose automatically loads it. The `.env.example` file is a template you commit to Git (with placeholder values). The real `.env` file (with real values) stays out of Git.
+First, understand the distinction — this is critical and easy to confuse:
+
+| File | Purpose | What It Contains | Git | Who Sees It |
+|------|---------|------------------|-----|------------|
+| `.env` | **Your actual secrets** | Real database paths, API keys, project IDs | ❌ NO — .gitignore hides it | Only you |
+| `.env.example` | **Blueprint/template** | Same variable names but placeholder values | ✅ YES — commit to Git | Everyone (team, future-you) |
+
+> **Real Example:**
+> - `.env.example` says: "Hey team, the app needs `GCP_PROJECT_ID` — put your actual project ID here"
+> - `.env` (your private file) says: `GCP_PROJECT_ID=resume-api-portfolio` (real value)
+> - `.gitignore` ensures `.env` never gets committed
+
+> **Why this matters:** When someone clones the repo, they see `.env.example` and know exactly what variables to set up. They never see your secrets.
+
+**Now create `.env.example` at repo root:**
+
+This file shows the BLUEPRINT — same variable names as your real `.env`, but with placeholder/dummy values:
 
 ```bash
 # === API Configuration ===
+# Replace /app/data/queries.db with your actual database path
 DATABASE_PATH=/app/data/queries.db
 
 # === BigQuery Configuration (Phase 2.5 — ETL) ===
-# Uncomment when setting up ETL pipeline
-# GCP_PROJECT_ID=your-project-id
+# Uncomment and fill in when setting up ETL pipeline
+# GCP_PROJECT_ID=your-actual-gcp-project-id
 # BIGQUERY_DATASET=resume_api_analytics
 # BIGQUERY_TABLE=api_queries
 # GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service-account-key.json
 
 # === Traffic Simulator Configuration (Phase 2.4) ===
-# Uncomment when setting up traffic simulation
+# Uncomment and fill in when setting up traffic simulation
 # TARGET_HOST=http://api:8080
 # LOCUST_USERS=3
 # LOCUST_SPAWN_RATE=1
 ```
 
-> Lines starting with `#` are commented out — they're placeholders for later phases. You'll uncomment them as you build out ETL and the traffic simulator.
+> **Key difference from `.env`:** Lines are commented out (`#`) OR contain placeholder values like `your-actual-gcp-project-id`. This tells the next person "here's what you need to fill in."
 
 **File 2: Create `systemd/resume-api.service`**
 
