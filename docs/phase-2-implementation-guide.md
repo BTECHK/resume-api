@@ -3,7 +3,7 @@
 
 **Goal:** Take the Phase 1 REST API (9 endpoints on Cloud Run) and build a complete data pipeline around it — persistent hosting, live traffic simulation, automated ETL, and BigQuery analytics — all on GCP free tier.
 **Total Cost:** $0.00 (Google Cloud Always Free tier)
-**Primary Tool:** Firebase Studio with Gemini AI-assisted development
+**Primary Tool:** Firebase Studio (DevOps/infra files built by hand; Python code via Gemini AI-assisted development)
 **Prerequisite:** Phase 1 complete (API deployed on Cloud Run, BigQuery dataset with 500K rows)
 
 ---
@@ -106,7 +106,7 @@ Phase 2 adds a new environment — the e2-micro VM. Watch for these tags:
 | 📍 **GCP Console** | Google Cloud Console in your browser | `console.cloud.google.com` — clicking buttons, enabling APIs |
 | 📍 **Firebase Terminal** | Terminal panel inside Firebase Studio | Black terminal at the bottom of the IDE — bash commands |
 | 📍 **Firebase Editor** | Code editor inside Firebase Studio | The file tabs at the top — editing .py files |
-| 📍 **VM Terminal** | SSH session into your e2-micro VM | `gcloud compute ssh` or browser-based SSH from GCP Console |
+| 📍 **VM Terminal** | SSH session into your e2-micro VM | Browser-based SSH from GCP Console (click "SSH" next to your VM instance) |
 | 📍 **Cloud Shell** | GCP's free browser-based terminal | `console.cloud.google.com` → click the `>_` icon top-right. Pre-authenticated, no setup needed |
 | 📍 **BigQuery Console** | BigQuery UI in your browser | `console.cloud.google.com/bigquery` — running SQL queries |
 | 📍 **Your Browser** | Your actual browser | Visiting deployed URLs, testing endpoints |
@@ -325,10 +325,7 @@ Your FastAPI app listens on port 8080 (matching the Cloud Run convention from Ph
 2. Click **"SSH"** next to `resume-api-vm`
 3. A terminal window opens in your browser — you're now on the VM
 
-**Or connect via gcloud (from Firebase Terminal):**
-```bash
-gcloud compute ssh resume-api-vm --zone=us-central1-a
-```
+> ⚠️ **Note:** `gcloud compute ssh` does not work from Firebase Terminal (SSH not supported on that platform). Use browser SSH instead.
 
 **Install Docker and Docker Compose:**
 📍 **VM Terminal**
@@ -405,49 +402,83 @@ ls -la api/ data/ sql/
 > **Replace `YOUR_USERNAME`** with your actual GitHub username. If the repo is private, you'll need to set up a personal access token or SSH key.
 
 ### Step 7.5 — Create docker-compose.yml
-📍 **Firebase Studio → Gemini Chat** (generate the file, then push to GitHub, then pull on VM)
+📍 **Firebase Editor** (create the file by hand, then push to GitHub, then pull on VM)
 
 > **Workflow note:** You write and test code in Firebase Studio, push to GitHub, then pull on the VM. This keeps Firebase Studio as your development environment and the VM as your deployment target.
 
-**PROMPT TO COPY (paste into Gemini):**
+> **🧠 ELI5 — How Docker Compose fits in:** You just installed Docker on the VM. Docker runs individual containers. But your project will eventually have multiple containers (API, traffic simulator, ETL). Docker Compose lets you define ALL of them in one YAML file and start/stop them together with a single command. Think of it as a recipe card — Docker is the oven, Docker Compose is the recipe that says what to cook and how.
 
-```
-Read docs/gemini-context.md first. Then create docker-compose.yml at the repo root.
+**Build it yourself — create `docker-compose.yml` at the repo root:**
 
-This is a Phase 2 addition. Do NOT modify any existing Phase 1 files.
+**Step 1:** Create the file and add the top-level structure. Every compose file starts with `services:` — this is the list of containers to run.
 
-Create docker-compose.yml with a SINGLE service for now (we add more services later):
-
+```yaml
+# Defines the services that make up the application.
 services:
+  # The main API service.
   api:
+```
+
+**Step 2:** Tell Docker how to build this container. `build` says "build an image from a Dockerfile." `context` is which folder contains the code. `dockerfile` is which Dockerfile to use inside that folder.
+
+```yaml
+    # Configuration for building the Docker image for the API service.
     build:
+      # The build context is the 'api' directory.
       context: ./api
+      # The Dockerfile to use for building the image.
       dockerfile: Dockerfile
+```
+
+**Step 3:** Map ports. Format is `"HOST:CONTAINER"` — traffic hitting the VM on port 8080 gets routed to port 8080 inside the container.
+
+```yaml
+    # Maps port 8080 on the host to port 8080 in the container.
     ports:
       - "8080:8080"
-    volumes:
-      - ./data:/app/data
-    environment:
-      - DATABASE_PATH=/app/data/queries.db
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
-IMPORTANT:
-- Only the api service for now. Traffic simulator and ETL are added in later phases.
-- Volume mount ./data:/app/data maps the host's data directory into the container
-- restart: unless-stopped means the container auto-restarts if it crashes
-- The healthcheck uses curl to verify the API is responding
-
-Do NOT add version: '3.8' at the top — it's deprecated in modern Docker Compose.
-Add comments explaining each section.
 ```
 
-**After Gemini generates the file, verify:**
+**Step 4:** Mount a volume. This shares a folder between the VM and the container. Your SQLite database lives here — without this, data would be lost every time the container restarts.
+
+```yaml
+    # Mounts the host's './data' directory to '/app/data' in the container.
+    volumes:
+      - ./data:/app/data
+```
+
+**Step 5:** Set environment variables inside the container. Your Python code reads `DATABASE_PATH` to know where the SQLite file is.
+
+```yaml
+    # Sets environment variables inside the container.
+    environment:
+      - DATABASE_PATH=/app/data/queries.db
+```
+
+**Step 6:** Add restart policy and healthcheck. `restart` tells Docker what to do if the container crashes. `healthcheck` is Docker periodically checking "is this thing actually working?"
+
+```yaml
+    # Configures the restart policy for the container.
+    # 'unless-stopped' means the container will restart automatically unless
+    # you manually stop it.
+    restart: unless-stopped
+    # Defines a health check to determine if the container is healthy.
+    healthcheck:
+      # The command to run to check the health of the container.
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      # The time between health checks.
+      interval: 30s
+      # The maximum time to wait for a health check to complete.
+      timeout: 10s
+      # The number of times to retry a failed health check before marking the
+      # container as unhealthy.
+      retries: 3
+      # The time to wait before starting health checks.
+      start_period: 10s
+```
+
+> ⚠️ **Do NOT** add `version: '3.8'` at the top — it's deprecated in modern Docker Compose.
+
+**Verify your file:**
 
 ```bash
 grep -n 'services:' docker-compose.yml
@@ -457,48 +488,95 @@ grep -n 'healthcheck' docker-compose.yml
 grep -n 'restart' docker-compose.yml
 ```
 
-Each grep should print at least one line. If any prints nothing, tell Gemini what's missing.
+Each grep should print at least one line. If any prints nothing, something is missing — check your indentation (YAML is whitespace-sensitive, use 2 spaces per level).
 
 ### Step 7.6 — Create API Dockerfile (Multi-Stage Build)
-📍 **Firebase Studio → Gemini Chat**
+📍 **Firebase Editor** (build by hand)
 
-**PROMPT TO COPY:**
+> **🧠 ELI5 — What is a Dockerfile?** Docker Compose told Docker "build the API from `./api`." But Docker needs instructions for HOW to build it — that's the Dockerfile. It's a recipe: start with a base image (like a blank Linux box with Python), copy your code in, install dependencies, and define how to run it. Each line creates a "layer" — Docker caches layers, so unchanged steps don't re-run.
+
+> **Why a separate Dockerfile?** The root Dockerfile (Phase 1) is designed for Cloud Run. This new one in `api/` is optimized for Docker Compose — it uses a non-root user, has a smaller image, and includes curl for healthchecks. Different deployment targets need different container configs.
+
+**First, create `api/requirements.txt`** — this lists ONLY the API dependencies (not data generation or BigQuery packages — those go in other containers later):
 
 ```
-Read docs/gemini-context.md first. Create api/Dockerfile — this is SEPARATE from the root
-Dockerfile (which is for Cloud Run). This new Dockerfile is for Docker Compose.
-
-Use a multi-stage build:
-
-Stage 1 (builder):
-- FROM python:3.11-slim AS builder
-- Create virtual environment at /opt/venv
-- Copy requirements.txt and pip install into the venv
-
-Stage 2 (runtime):
-- FROM python:3.11-slim
-- Copy the venv from builder stage
-- Install curl (needed for healthcheck)
-- Copy application code
-- Create non-root user "appuser" for security
-- Run as appuser
-- CMD: uvicorn main:app --host 0.0.0.0 --port 8080
-
-IMPORTANT:
-- This Dockerfile is in api/ directory, so COPY . . copies from api/ context
-- The CMD uses main:app (not api.main:app) because the build context is already api/
-- Install curl with: apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
-- Non-root user: useradd -m appuser && chown -R appuser:appuser /app
-
-Also create api/requirements.txt with ONLY the API dependencies (not the data generation
-or BigQuery packages — those go in other containers):
 fastapi>=0.100.0
 uvicorn[standard]>=0.23.0
 pydantic>=2.0.0
-
-Do NOT modify the root-level Dockerfile or requirements.txt.
-Add comments explaining the multi-stage build and why it reduces image size.
 ```
+
+> These three packages are all the API container needs. `fastapi` is the web framework, `uvicorn` is the ASGI server that runs it, `pydantic` handles data validation. The root `requirements.txt` has everything for all phases — this scoped file keeps the container small.
+
+**Now build `api/Dockerfile` — we're using a multi-stage build:**
+
+> **🧠 ELI5 — What is a multi-stage build?** Imagine building a house. Stage 1 is the construction site — heavy equipment, lumber, tools. Stage 2 is the finished house — you throw away the construction equipment and just keep the house. Multi-stage Dockerfiles work the same way: Stage 1 installs build tools + dependencies, Stage 2 copies only the finished result. Smaller image = less attack surface + faster deploys.
+
+**Step 1:** Start with the builder stage. This installs your Python dependencies into a virtual environment.
+
+```dockerfile
+# ---- Stage 1: Builder ----
+# Install dependencies in an isolated virtual environment
+FROM python:3.11-slim AS builder
+
+# Create a virtual environment
+RUN python -m venv /opt/venv
+# Ensure the venv's bin is first in PATH so pip/python resolve there
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy only requirements first (Docker caches this layer —
+# dependencies only reinstall if requirements.txt changes)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+```
+
+**Step 2:** Create the runtime stage. This is the actual image that runs. It copies the venv from the builder but has none of the build tools.
+
+```dockerfile
+# ---- Stage 2: Runtime ----
+# Start fresh — no build tools, just Python
+FROM python:3.11-slim
+
+# Copy the pre-built virtual environment from the builder stage
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install curl (needed for Docker healthcheck in docker-compose.yml)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*
+```
+
+> `--no-install-recommends` skips optional packages to keep the image lean. `rm -rf /var/lib/apt/lists/*` cleans up the apt cache — standard Docker practice to reduce image size.
+
+**Step 3:** Copy your application code and set up a non-root user for security.
+
+```dockerfile
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy the application code from the api/ directory
+COPY . .
+
+# Create a non-root user for security — if someone exploits the app,
+# they can't modify system files
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Start the FastAPI server
+# main:app because the Dockerfile is in api/, so main.py is at the root
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+```
+
+> **Why `main:app` and not `api.main:app`?** Because the build context in docker-compose.yml is `./api`. Docker copies from `api/` into the container — so `main.py` is at the container's root, not in an `api/` subdirectory.
+
+> **Why non-root?** By default, containers run as root. If an attacker exploits your API, they'd have root access inside the container. Running as `appuser` limits the blast radius.
+
+**🧠 Putting it together — how the pieces connect:**
+1. `docker-compose.yml` says "build from `./api` using `Dockerfile`"
+2. Docker reads `api/Dockerfile` — builds Stage 1 (install deps), then Stage 2 (copy only what's needed)
+3. Stage 2 reads `api/requirements.txt` to know which Python packages to install
+4. The final image contains only: Python, your 3 packages, curl, and your code — running as `appuser`
+5. Docker Compose then applies the port mapping, volume mount, and healthcheck on top
 
 **Verify:**
 
@@ -507,26 +585,45 @@ grep -n 'FROM python:3.11-slim' api/Dockerfile
 # Expected: 2 lines (builder stage + runtime stage)
 
 grep -n 'appuser' api/Dockerfile
-# Expected: at least 1 line (non-root user)
+# Expected: at least 2 lines (useradd + USER)
 
 cat api/requirements.txt
 # Expected: fastapi, uvicorn, pydantic (3 packages)
 ```
 
-> **Why multi-stage?** The builder stage installs all the build tools needed for pip (gcc, headers, etc.). The runtime stage only copies the finished virtual environment — no build tools, smaller image. This typically saves 20-30% image size.
+**🛠️ Common Docker Build Issue — Relative Imports Fail:**
 
-> **Why a separate Dockerfile?** The root Dockerfile (Phase 1) copies the entire project and is designed for Cloud Run's build system. The api/Dockerfile is optimized for Docker Compose — it only includes the API code, uses a non-root user, and has a healthcheck. Different deployment targets need different container configurations.
+If your container crashes with `ImportError: attempted relative import with no known parent package`, this means your `api/main.py` is using relative imports:
+
+```python
+from . import models  # ❌ This fails in Docker
+```
+
+**Why it happens:** When Docker runs `uvicorn main:app`, Python loads `main.py` as a standalone file at `/app/main.py`. There's no `__init__.py` to mark `/app/` as a package, so Python doesn't recognize it as having a "parent" for relative imports.
+
+**Fix:** Change to absolute imports in `api/main.py`:
+
+```python
+import models    # ✅ This works — Python finds models.py in the same directory
+import database  # ✅ Same applies to database.py
+```
+
+Both approaches work fine locally (because your IDE/machine can resolve either), but Docker requires absolute imports when running as a standalone module. This is a common gotcha when containerizing Python projects that started as local development.
+
+After fixing the imports, rebuild:
+
+```bash
+docker compose up --build -d
+```
 
 ### Step 7.7 — Create .env.example and systemd Service
-📍 **Firebase Studio → Gemini Chat**
+📍 **Firebase Editor** (build by hand)
 
-**PROMPT TO COPY:**
+**File 1: Create `.env.example` at repo root**
 
-```
-Read docs/gemini-context.md first. Create two files:
+> **🧠 ELI5 — What is .env?** Environment variables are settings your app reads at runtime — database paths, API keys, project IDs. Instead of hardcoding them in your Python code, you put them in a `.env` file. Docker Compose automatically loads it. The `.env.example` file is a template you commit to Git (with placeholder values). The real `.env` file (with real values) stays out of Git.
 
-1. .env.example at repo root — template showing all environment variables for Phase 2:
-
+```bash
 # === API Configuration ===
 DATABASE_PATH=/app/data/queries.db
 
@@ -542,32 +639,69 @@ DATABASE_PATH=/app/data/queries.db
 # TARGET_HOST=http://api:8080
 # LOCUST_USERS=3
 # LOCUST_SPAWN_RATE=1
-
-2. systemd/resume-api.service — auto-start Docker Compose on VM boot:
-
-[Unit]
-Description=Resume API Data Pipeline
-Requires=docker.service
-After=docker.service
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-WorkingDirectory=/home/YOUR_USERNAME/resume-api
-ExecStart=/usr/bin/docker compose up -d
-ExecStop=/usr/bin/docker compose down
-TimeoutStartSec=0
-
-[Install]
-WantedBy=multi-user.target
-
-Add comments explaining each section in both files.
-Also create the systemd/ directory if it doesn't exist: mkdir -p systemd
 ```
 
-> **What is systemd?** It's Linux's service manager — the thing that starts services when the machine boots. Without this, your Docker containers would stop running whenever the VM restarts. The service file tells systemd: "after Docker is ready, run `docker compose up -d` to start all containers."
+> Lines starting with `#` are commented out — they're placeholders for later phases. You'll uncomment them as you build out ETL and the traffic simulator.
 
-> **YOUR_USERNAME placeholder:** You'll replace this with your actual VM username when deploying. The default on GCP is usually your Google account username (the part before @gmail.com).
+**File 2: Create `systemd/resume-api.service`**
+
+First create the directory:
+```bash
+mkdir -p systemd
+```
+
+> **🧠 ELI5 — What is systemd?** When your VM restarts, nothing runs automatically — Docker containers just stop. systemd is Linux's service manager — it starts things on boot. You're writing a config file that says: "When the machine starts, after Docker is ready, run my containers." Without this, you'd have to SSH in and run `docker compose up` manually after every reboot.
+
+Build `systemd/resume-api.service` section by section:
+
+**Section 1: `[Unit]`** — Describes the service and its dependencies.
+
+```ini
+[Unit]
+# Human-readable name for this service
+Description=Resume API Data Pipeline
+# This service needs Docker to be running first
+Requires=docker.service
+# Don't start until Docker is ready
+After=docker.service
+```
+
+> `Requires` = hard dependency (if Docker fails, this fails). `After` = ordering (wait for Docker to start first). Together they say "Docker must be running before my containers can start."
+
+**Section 2: `[Service]`** — What to actually run.
+
+```ini
+[Service]
+# oneshot = run the command once, then consider the service "started"
+# (as opposed to a long-running daemon)
+Type=oneshot
+# Keep the service marked as "active" even after the command finishes
+# (because docker compose runs in the background with -d)
+RemainAfterExit=yes
+# Where to run the command from
+WorkingDirectory=/home/YOUR_USERNAME/resume-api
+# Command to start the containers
+ExecStart=/usr/bin/docker compose up -d
+# Command to stop the containers
+ExecStop=/usr/bin/docker compose down
+# Don't kill it if startup takes a while (image builds can be slow)
+TimeoutStartSec=0
+```
+
+> **YOUR_USERNAME placeholder:** Replace this with your actual VM username when deploying. On GCP it's usually your Google account username (the part before @gmail.com).
+
+**Section 3: `[Install]`** — When to activate this service.
+
+```ini
+[Install]
+# Start this service when the system reaches "multi-user" mode
+# (normal boot — as opposed to rescue/single-user mode)
+WantedBy=multi-user.target
+```
+
+> `multi-user.target` is Linux's "normal operating mode" — the system is fully booted with networking. This is the standard target for server services.
+
+**🧠 Putting it together:** After deploying, you'll copy this file to `/etc/systemd/system/`, then run `systemctl enable resume-api` — that tells systemd "use this config on every boot." From then on, VM restart → Docker starts → your containers start → API is live. No manual intervention.
 
 ### Step 7.8 — Update .gitignore
 📍 **Firebase Editor**
@@ -1537,14 +1671,7 @@ from apscheduler.triggers.cron import CronTrigger
 - Run an initial sync on startup (catches up unsynced records from before scheduler started)
 - Log scheduler start and each job execution
 
-Also create:
-- etl/Dockerfile (python:3.11-slim, pip install, CMD python scheduler.py)
-- etl/requirements.txt:
-  apscheduler>=3.10.0
-  google-cloud-bigquery>=3.0.0
-  pandas>=2.0.0
-  pyarrow>=14.0.0
-  db-sqlite3>=0.0.1
+DO NOT create the Dockerfile or requirements.txt — you will build those by hand in Step 10.3b below.
 
 IMPORTANT:
 - BATCH loading only — BigQuery streaming inserts are NOT available on free tier
@@ -1573,25 +1700,82 @@ grep -n 'WRITE_APPEND' etl/sqlite_to_bigquery.py
 # Expected: 1 line (never truncate)
 ```
 
-### Step 10.4 — Update docker-compose.yml to Add ETL Service
-📍 **Firebase Studio → Gemini Chat**
+### Step 10.3b — Create ETL Dockerfile and Requirements (Build by Hand)
+📍 **Firebase Editor**
 
-**PROMPT TO COPY:**
+> **🧠 ELI5 — Why a separate container for ETL?** The API container serves web requests. The ETL container runs a background scheduler that periodically syncs data to BigQuery. Different jobs, different dependencies, different lifecycle. If the ETL crashes, the API keeps serving. This is the "separation of concerns" principle applied to containers.
+
+**First, create `etl/requirements.txt`:**
 
 ```
-Read docs/gemini-context.md first. Update docker-compose.yml to add the etl service.
+apscheduler>=3.10.0
+google-cloud-bigquery>=3.0.0
+pandas>=2.0.0
+pyarrow>=14.0.0
+db-sqlite3>=0.0.1
+```
 
-Add this service AFTER the existing api service:
+> `apscheduler` runs the cron schedule, `google-cloud-bigquery` talks to BigQuery, `pandas`/`pyarrow` handle data transformation, `db-sqlite3` reads from the local database.
 
+**Now create `etl/Dockerfile`:**
+
+This one is simpler than the API Dockerfile — no multi-stage build needed because there's no healthcheck or web server, just a Python script.
+
+```dockerfile
+# Single-stage build — ETL is a background worker, not a web server
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Copy and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Create non-root user (same security practice as the API)
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Run the scheduler (not uvicorn — this isn't a web server)
+CMD ["python", "scheduler.py"]
+```
+
+> **Why no multi-stage here?** The API Dockerfile used multi-stage to separate build tools from runtime. The ETL container has simpler dependencies (no compiled C extensions) so a single stage keeps it readable without a meaningful size penalty.
+
+**Verify:**
+
+```bash
+cat etl/Dockerfile
+cat etl/requirements.txt
+grep -n 'appuser' etl/Dockerfile
+# Expected: at least 2 lines
+```
+
+### Step 10.4 — Update docker-compose.yml to Add ETL Service
+📍 **Firebase Editor** (add by hand)
+
+> **🧠 ELI5 — How two containers share data:** The API writes request logs to SQLite. The ETL reads from that same SQLite file. They share it via a volume mount — both containers mount `./data` from the VM. The `:ro` on the credentials mount means "read-only" — the ETL can read the service account key but can't modify it.
+
+Add this service block to your `docker-compose.yml`, **after** the existing `api` service (same indentation level as `api:`):
+
+```yaml
+  # ETL service — syncs SQLite data to BigQuery on a schedule
   etl:
     build:
       context: ./etl
       dockerfile: Dockerfile
+    # Wait for the API to be healthy before starting ETL
+    # (ensures the database exists and has data)
     depends_on:
       api:
         condition: service_healthy
     volumes:
+      # Share the data directory with API (both read/write SQLite)
       - ./data:/app/data
+      # Mount service account key as read-only
       - ./credentials:/app/credentials:ro
     environment:
       - GCP_PROJECT_ID=resume-api-portfolio
@@ -1600,13 +1784,11 @@ Add this service AFTER the existing api service:
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/service-account-key.json
       - DATABASE_PATH=/app/data/queries.db
     restart: unless-stopped
-
-IMPORTANT:
-- volumes: ./data:/app/data — shares SQLite database with the API container
-- volumes: ./credentials:/app/credentials:ro — read-only access to service account key
-- GOOGLE_APPLICATION_CREDENTIALS — tells the BigQuery Python client where the key is
-- Do NOT modify the existing api service
 ```
+
+> **`depends_on` with `condition: service_healthy`** — this uses the healthcheck you defined on the API service. Docker won't start the ETL container until the API's curl healthcheck passes. This ensures the SQLite database exists before ETL tries to read it.
+
+> **Do NOT modify the existing `api` service** — just add this block below it.
 
 ### Step 10.5 — Test ETL Locally (Before BigQuery)
 📍 **Firebase Terminal**

@@ -9,9 +9,11 @@ import time
 import collections
 from typing import List, Optional
 
-# Assuming models.py and database.py are in the same directory (api/)
-from . import models
-from . import database
+# Import models and database modules directly (absolute imports)
+# These must be absolute imports because uvicorn runs main.py as a standalone module,
+# not as part of a package, so relative imports fail
+import models
+import database
 
 # --- FastAPI App Initialization ---
 app = FastAPI(
