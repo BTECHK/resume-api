@@ -1,0 +1,28 @@
+[Unit]
+#human-readable name for this service
+Description=Resume API Data Pipeline
+#this service needs Docker to be running first
+Requires=docker.service
+# Don't start until Docker is ready
+After=docker.service
+
+[Service]
+# oneshot = run the command once,, then consider the service "started"
+# (as opposed to a long-running-daemon)
+Type=oneshot
+
+#Keep the service marked as "active" even when the command finishes (because docker compose runs in the background with -d)
+RemainAfterExit=yes
+# Where to run the command from 
+WorkingDirectory=/home/YOUR_USERNAME/resume-api
+#Command to start the containers
+ExecStart=/usr/bin/docker compose up -d
+# Command to stop the containers
+ExecStop=/usr/bin/docker compose down
+#Dont kill it if startup takes a while (image builds can be slow)
+TimeoutStartSec=0
+
+[Install]
+# Start this service when the system reaches "multi-user" mode
+# (normal boot - as opposed to rescue/single-user mode)
+WantedBy=multi-user.target
