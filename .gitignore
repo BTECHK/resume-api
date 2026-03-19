@@ -45,6 +45,8 @@ nul
 # Secrets
 .env
 .env.*
+!.env.example
+credentials/
 credentials.json
 *-credentials.json
 service-account*.json
