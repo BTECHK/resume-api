@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 class Contact(BaseModel):
     name: str
@@ -60,9 +60,6 @@ class Performance(BaseModel):
     p95: float
     p99: float
 
-
-# --- Phase 2: Recruiter Funnel Models ---
-
 class ContactRequest(BaseModel):
     """Recruiter requests contact with candidate."""
     recruiter_email: str
@@ -79,4 +76,4 @@ class ActionResponse(BaseModel):
     """Response for recruiter action endpoints."""
     status: str
     message: str
-    confirmation_id: str | None = None
+    confirmation_id: Optional[str] = None

@@ -9,11 +9,14 @@ import time
 import collections
 from typing import List, Optional
 
-# Import models and database modules directly (absolute imports)
-# These must be absolute imports because uvicorn runs main.py as a standalone module,
-# not as part of a package, so relative imports fail
+# Import models and database modules
 import models
 import database
+
+# Phase 2: Import new middleware and DB initializer
+# Corrected imports for Docker context
+from middleware.logging import LoggingMiddleware
+from database import init_db
 
 # --- FastAPI App Initialization ---
 app = FastAPI(
@@ -22,46 +25,32 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# --- Database Initialization ---
+@app.on_event("startup")
+def startup_event():
+    """
+    Initializes the database connection and tables on application startup.
+    This is the recommended way to manage resources in FastAPI.
+    """
+    init_db()
+
 # --- Middleware ---
+
+# Phase 2: Add the new logging middleware.
+# This captures request data, including custom headers for analytics.
+app.add_middleware(LoggingMiddleware)
 
 # CORS (Cross-Origin Resource Sharing)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for this portfolio project
+    allow_origins=["*"]
+    ,
     allow_credentials=True,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],  # Updated for Phase 2
     allow_headers=["*"],
 )
 
-@app.middleware("http")
-async def add_process_time_and_logging_header(request: Request, call_next):
-    """
-    Middleware to log requests, calculate response time, and add custom headers.
-    """
-    start_time = time.time()
-    
-    # Log the request to the database
-    conn = database.get_db_connection()
-    conn.execute(
-        'INSERT INTO queries (domain, path, client_ip) VALUES (?, ?, ?)',
-        (request.url.hostname, request.url.path, request.client.host)
-    )
-    conn.commit()
-    conn.close()
-
-    response = await call_next(request)
-    
-    process_time = (time.time() - start_time) * 1000  # in milliseconds
-    response.headers["X-Process-Time-ms"] = str(process_time)
-    
-    # Simulated Rate Limiting Headers
-    response.headers["X-RateLimit-Limit"] = "1000"
-    response.headers["X-RateLimit-Remaining"] = "999" # Simplified for portfolio
-
-    print(f"timestamp={time.time()} endpoint={request.url.path} response_time_ms={process_time:.2f} client_ip={request.client.host}")
-    
-    return response
-
+# The old @app.middleware("http") has been removed and replaced by LoggingMiddleware.
 
 # --- Hardcoded Resume Data ---
 RESUME_DATA = {
@@ -189,14 +178,10 @@ RESUME_DATA = {
     ]
 }
 
-
 # --- API Endpoints ---
 
 @app.get("/", response_model=models.HealthStatus)
 def get_health_status():
-    """
-    Returns the health status and metadata of the API.
-    """
     return {
         "status": "healthy",
         "version": "1.0",
@@ -207,6 +192,8 @@ def get_health_status():
             "/resume/skills",
             "/resume/education",
             "/resume/certifications",
+            "/resume/contact",
+            "/resume/shortlist",
             "/analytics/queries",
             "/analytics/top-domains",
             "/analytics/performance",
@@ -217,46 +204,29 @@ def get_health_status():
 
 @app.get("/resume", response_model=models.Resume)
 def get_resume():
-    """
-    Returns the complete resume as a structured JSON object.
-    """
     return RESUME_DATA
 
 
 @app.get("/resume/experience", response_model=List[models.Experience])
 def get_resume_experience(company: Optional[str] = None, after: Optional[int] = None):
-    """
-    Returns work experience, with optional filtering by company and start year.
-    """
     experience = RESUME_DATA["experience"]
-    
     if company:
         experience = [exp for exp in experience if company.lower() in exp['company'].lower()]
-
     if after:
-        # A simple year extraction for demonstration
         experience = [exp for exp in experience if int(exp['dates'].split('–')[0].split()[-1]) >= after]
-        
     if not experience:
         raise HTTPException(status_code=404, detail="No experience found matching the criteria.")
-        
     return experience
 
 
 @app.get("/resume/skills")
 def get_resume_skills(category: Optional[str] = None, keyword: Optional[str] = None):
-    """
-    Returns skills, optionally filtered by category or a specific keyword.
-    """
     skills = RESUME_DATA["skills"]
-
     if category:
         if category in skills:
-            # Return as a plain dict (via JSONResponse) to bypass the response_model for filtered results.
             return JSONResponse(content={category: skills[category]})
         else:
             raise HTTPException(status_code=404, detail=f"Skill category '{category}' not found.")
-
     if keyword:
         filtered_skills = collections.defaultdict(list)
         for cat, skill_list in skills.items():
@@ -265,88 +235,81 @@ def get_resume_skills(category: Optional[str] = None, keyword: Optional[str] = N
                     filtered_skills[cat].append(skill)
         if not filtered_skills:
             raise HTTPException(status_code=404, detail=f"No skills found with keyword '{keyword}'.")
-        # Return as a plain dict (via JSONResponse) to bypass the response_model for filtered results.
         return JSONResponse(content=dict(filtered_skills))
-
-    # For the unfiltered case, FastAPI will validate against the response_model
     return skills
 
 
 @app.get("/resume/education", response_model=List[models.Education])
 def get_resume_education():
-    """
-    Returns education history.
-    """
     return RESUME_DATA["education"]
 
 
 @app.get("/resume/certifications", response_model=List[models.Certification])
 def get_resume_certifications():
-    """
-    Returns a list of certifications.
-    """
     return RESUME_DATA["certifications"]
 
+@app.post("/resume/contact", response_model=models.ActionResponse)
+def request_contact(request_data: models.ContactRequest):
+    """Recruiter requests an interview or sends a message.
+
+    This is a portfolio demo — no actual message is sent.
+    The request is logged by middleware for pipeline analytics.
+    """
+    import uuid
+    return models.ActionResponse(
+        status="received",
+        confirmation_id=f"conf_{uuid.uuid4().hex[:8]}",
+        message="Contact request logged. This is a portfolio demo — no actual message is sent."
+    )
+
+@app.post("/resume/shortlist", response_model=models.ActionResponse)
+def shortlist_candidate(request_data: models.ShortlistRequest):
+    """Recruiter saves candidate to a shortlist.
+
+    This is a portfolio demo — no actual list is maintained.
+    The request is logged by middleware for pipeline analytics.
+    """
+    return models.ActionResponse(
+        status="shortlisted",
+        message="Candidate added to shortlist. This is a portfolio demo."
+    )
 
 @app.get("/analytics/queries", response_model=List[models.AnalyticsQuery])
 def get_analytics_queries(domain: Optional[str] = None, limit: int = 50, offset: int = 0):
-    """
-    Retrieves visitor query log data from the SQLite database with pagination.
-    """
     conn = database.get_db_connection()
-    
-    query = "SELECT query_id as id, timestamp, recruiter_domain as domain, endpoint_hit as path FROM api_queries"
+    query = "SELECT query_id as id, timestamp, recruiter_domain as domain, path FROM queries"
     params = []
-    
     if domain:
         query += " WHERE recruiter_domain = ?"
         params.append(domain)
-        
     query += " ORDER BY timestamp DESC LIMIT ? OFFSET ?"
     params.extend([limit, offset])
-    
     queries = conn.execute(query, tuple(params)).fetchall()
     conn.close()
-    
     if not queries:
         raise HTTPException(status_code=404, detail="No queries found for the given criteria.")
-        
-    # Manually add a placeholder for client_ip to match the Pydantic model
     results = []
     for q in queries:
         query_dict = dict(q)
-        query_dict['client_ip'] = 'N/A'  # Placeholder value
+        query_dict['client_ip'] = 'N/A'
         results.append(query_dict)
-
     return results
 
 
 @app.get("/analytics/top-domains", response_model=models.TopDomains)
 def get_top_domains(n: int = 10):
-    """
-    Returns the top N domains that have hit the API.
-    """
     conn = database.get_db_connection()
-    domains = [row['recruiter_domain'] for row in conn.execute("SELECT recruiter_domain FROM api_queries").fetchall()]
+    domains = [row['recruiter_domain'] for row in conn.execute("SELECT recruiter_domain FROM queries").fetchall()]
     conn.close()
-
     if not domains:
         return {"top_domains": {}}
-
     counter = collections.Counter(domains)
     top_domains_counter = dict(counter.most_common(n))
-
     return {"top_domains": top_domains_counter}
 
 
 @app.get("/analytics/performance", response_model=models.Performance)
 def get_performance_analytics():
-    """
-    Simulates API performance monitoring by returning response time percentiles.
-    This is a simulation and does not reflect real performance metrics.
-    """
-    # In a real-world scenario, you would calculate these from logged response times.
-    # Here, we are just returning static, simulated data.
     return {
         "p50": 50.0,
         "p95": 250.0,
@@ -384,4 +347,8 @@ def shortlist_candidate(request_data: models.ShortlistRequest):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
+<<<<<<< Updated upstream
+=======
+    # Corrected for Docker context
+>>>>>>> Stashed changes
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
