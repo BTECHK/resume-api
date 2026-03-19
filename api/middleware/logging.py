@@ -1,7 +1,7 @@
 import time
 from urllib.parse import urlparse
 from starlette.background import BackgroundTask
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseCall
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
@@ -21,7 +21,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: ASGIApp):
         super().__init__(app)
 
-    async def dispatch(self, request: Request, call_next: RequestResponseCall) -> Response:
+    async def dispatch(self, request: Request, call_next) -> Response:
         start_time = time.time()
 
         response = await call_next(request)
