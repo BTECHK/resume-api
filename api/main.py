@@ -210,6 +210,8 @@ def get_health_status():
             "/analytics/queries",
             "/analytics/top-domains",
             "/analytics/performance",
+            "/resume/contact",
+            "/resume/shortlist",
         ]
     }
 
@@ -351,6 +353,35 @@ def get_performance_analytics():
         "p99": 750.0
     }
 
+# --- Phase 2: Recruiter Funnel Endpoints ---
+
+@app.post("/resume/contact", response_model=models.ActionResponse)
+def request_contact(request_data: models.ContactRequest):
+    """Recruiter requests an interview or sends a message.
+
+    This is a portfolio demo — no actual message is sent.
+    The request is logged by middleware for pipeline analytics.
+    """
+    import uuid
+    return models.ActionResponse(
+        status="received",
+        confirmation_id=f"conf_{uuid.uuid4().hex[:8]}",
+        message="Contact request logged. This is a portfolio demo — no actual message is sent."
+    )
+
+@app.post("/resume/shortlist", response_model=models.ActionResponse)
+def shortlist_candidate(request_data: models.ShortlistRequest):
+    """Recruiter saves candidate to a shortlist.
+
+    This is a portfolio demo — no actual list is maintained.
+    The request is logged by middleware for pipeline analytics.
+    """
+    return models.ActionResponse(
+        status="shortlisted",
+        message="Candidate added to shortlist. This is a portfolio demo."
+    )
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("api.main:app", host="0.0.0.0", port=port, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

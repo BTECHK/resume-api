@@ -59,3 +59,24 @@ class Performance(BaseModel):
     p50: float
     p95: float
     p99: float
+
+
+# --- Phase 2: Recruiter Funnel Models ---
+
+class ContactRequest(BaseModel):
+    """Recruiter requests contact with candidate."""
+    recruiter_email: str
+    company: str
+    message: str
+    role: str
+
+class ShortlistRequest(BaseModel):
+    """Recruiter adds candidate to a shortlist."""
+    list_name: str
+    priority: str  # "high", "medium", "low"
+
+class ActionResponse(BaseModel):
+    """Response for recruiter action endpoints."""
+    status: str
+    message: str
+    confirmation_id: str | None = None
