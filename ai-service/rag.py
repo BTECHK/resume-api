@@ -8,7 +8,6 @@ import logging
 from typing import Optional
 
 import chromadb
-from chromadb.config import Settings as ChromaSettings
 from sentence_transformers import SentenceTransformer
 
 from resume_data import get_resume_as_text
@@ -16,13 +15,11 @@ from resume_data import get_resume_as_text
 logger = logging.getLogger(__name__)
 
 # Embedding model — runs locally, no API key needed
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+# paraphrase-MiniLM-L3-v2 (33MB) baked into Docker image for fast cold starts
+EMBEDDING_MODEL = "paraphrase-MiniLM-L3-v2"
 
 # Chroma collection name
 COLLECTION_NAME = "resume_knowledge"
-
-# Where to persist the vector DB (set via env var or default)
-CHROMA_PERSIST_DIR = os.getenv("CHROMA_PERSIST_DIR", "./chroma_db")
 
 # Chunk size for splitting resume text
 CHUNK_SIZE = 500
@@ -54,8 +51,7 @@ def chunk_text(text: str, chunk_size: int = CHUNK_SIZE, overlap: int = CHUNK_OVE
 class ResumeRAG:
     """Manages the resume vector database and retrieval."""
 
-    def __init__(self, persist_dir: str = CHROMA_PERSIST_DIR):
-        self.persist_dir = persist_dir
+    def __init__(self):
         self._embedder: Optional[SentenceTransformer] = None
         self._client: Optional[chromadb.ClientAPI] = None
         self._collection = None
@@ -70,11 +66,7 @@ class ResumeRAG:
     @property
     def client(self) -> chromadb.ClientAPI:
         if self._client is None:
-            self._client = chromadb.Client(ChromaSettings(
-                chroma_db_impl="duckdb+parquet",
-                persist_directory=self.persist_dir,
-                anonymized_telemetry=False,
-            ))
+            self._client = chromadb.EphemeralClient()
         return self._client
 
     @property
