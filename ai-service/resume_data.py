@@ -7,13 +7,13 @@ used by both the email bot and chatbot.
 RESUME_SECTIONS = {
     "contact": {
         "name": "The Candidate",
-        "email": "contact@example.com",
-        "linkedin": "https://www.linkedin.com/in/candidate-profilecandidate/",
+        "email": "resume-bot@example.com",
+        "linkedin": "[available on request]",
         "location": "Washington D.C.",
     },
     "summary": (
         "Technical Solutions Consultant with 8+ years developing customized solutions "
-        "for Fortune 500 enterprises (Meta, Dell, Kroger) and federal agencies. Combines "
+        "for Fortune 500 enterprises (top-3 social media conglomerate, Fortune 100 technology manufacturer, top-5 US grocery retailer) and federal agencies. Combines "
         "hands-on programming expertise (Python, SQL, Bash) with proven ability to manage "
         "technical relationships and translate complex requirements into scalable "
         "implementations for diverse client portfolios. Demonstrated track record "
@@ -62,7 +62,7 @@ RESUME_SECTIONS = {
     },
     "experience": [
         {
-            "company": "Consulting Firm A",
+            "company": "A Big Four Professional Services Firm",
             "title": "Consultant → Senior Consultant",
             "dates": "May 2018 – July 2025",
             "projects": [
@@ -91,10 +91,10 @@ RESUME_SECTIONS = {
                     ],
                 },
                 {
-                    "name": "Federal Defense Program",
+                    "name": "Federal Defense Program (Defense Intelligence Agency)",
                     "subtitle": "Strategic Solutions for HR IT Procurement",
                     "bullets": [
-                        "Designed strategic planning framework: Conducting 100+ stakeholder interviews across 15 departments to assess process drivers, identify gaps, and align IT procurement with DoD PPBE cycle — preventing future funding forfeitures",
+                        "Designed strategic planning framework: Conducting 100+ stakeholder interviews across 15 departments to assess process drivers, identify gaps, and align IT procurement with Department of Defense PPBE cycle — preventing future funding forfeitures",
                         "Delivered end-to-end solution documentation: Creating workflows, instructional templates, and standard operating procedures for initiative and investment management — establishing repeatable process that reduced procurement cycle 50% (6 to 3 months)",
                         "Led solution assessment and analysis of alternatives: Managing team of 3 contractors to evaluate analytics platforms (Tableau, Power BI, custom solutions), conducting prototype demos and presenting cost-benefit analysis with strategic tradeoff recommendations that saved $25K in platform costs",
                     ],
@@ -102,12 +102,12 @@ RESUME_SECTIONS = {
             ],
         },
         {
-            "company": "Consulting Firm B",
+            "company": "A Mid-Size Technology Consulting Firm",
             "title": "Jr. Developer → Developer",
             "dates": "October 2016 – April 2018",
             "projects": [
                 {
-                    "name": "Healthcare Program (Healthcare Program)",
+                    "name": "Healthcare Program (Regional Academic Medical Center)",
                     "subtitle": "Oracle HCM Cloud Implementation Solutions",
                     "bullets": [
                         "Led requirements gathering and business analysis: Managing key stakeholders through fit/gap analysis and discovery sessions to convert 150+ PeopleSoft/SQR reports to Oracle Cloud, analyzing 20+ PeopleSoft app engines and SQR interfaces for system integration compatibility",
@@ -116,7 +116,7 @@ RESUME_SECTIONS = {
                     ],
                 },
                 {
-                    "name": "Financial Services (Financial Services Program)",
+                    "name": "Financial Services (Multi-State Community Banking Group)",
                     "subtitle": "Oracle HCM Analytics Solutions",
                     "bullets": [
                         "Developed successful prototype securing contract extension: Creating proof-of-concept report using SQL and Oracle BI tools to integrate HCM data with external Excel sources, demonstrating 40% efficiency improvement in workforce analytics capabilities and securing $50K follow-on contract",
