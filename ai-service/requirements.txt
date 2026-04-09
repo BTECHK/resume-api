@@ -1,0 +1,15 @@
+# AI Service dependencies
+fastapi==0.115.12
+uvicorn[standard]==0.34.2
+pydantic==2.11.1
+
+# RAG stack
+chromadb>=1.0.0
+sentence-transformers>=3.0.0
+google-genai>=1.71.0
+
+# Security
+slowapi>=0.1.9
+
+# Utilities
+python-dotenv>=1.0.0

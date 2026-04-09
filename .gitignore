@@ -56,3 +56,13 @@ service-account*.json
 
 # Firebase Studio local state
 .idx/.local/
+
+# RAG corpus — raw files contain PII, never commit
+ai-service/resume_corpus/raw/
+ai-service/chroma_db/
+
+# n8n runtime data
+n8n/data/
+
+# Past interviews (original location, pre-consolidation)
+past interviews for rag bot/
