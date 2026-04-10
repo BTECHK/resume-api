@@ -1,0 +1,62 @@
+{
+  "name": "email-bot-error-handler",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "error-trigger-node",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "send",
+        "sendTo": "={{ $env.CANDIDATE_CONTACT_EMAIL }}",
+        "subject": "={{ \"[n8n Error] \" + $json.workflow.name + \" execution \" + $json.execution.id + \" failed\" }}",
+        "message": "={{ \"Workflow: \" + $json.workflow.name + \"\\nExecution ID: \" + $json.execution.id + \"\\nExecution URL: \" + $json.execution.url + \"\\nError: \" + ($json.execution.error ? $json.execution.error.message : 'Unknown') + \"\\n\\nCheck n8n UI for details.\" }}",
+        "options": {
+          "attributionValue": ""
+        }
+      },
+      "id": "gmail-send-error-node",
+      "name": "Gmail Send: Error Notification",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [470, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_AFTER_IMPORT",
+          "name": "Gmail Bot Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Gmail Send: Error Notification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "timezone": "America/New_York"
+  },
+  "staticData": null,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "versionId": ""
+}

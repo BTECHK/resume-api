@@ -1,0 +1,311 @@
+{
+  "name": "Email Bot — Phase 5",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 5,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "labelIds": ["INBOX", "UNREAD"],
+          "q": "-label:bot-replied -label:auto-replied"
+        },
+        "options": {}
+      },
+      "id": "gmail-trigger-node",
+      "name": "Gmail Trigger",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_AFTER_IMPORT",
+          "name": "Gmail Bot Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "cond-self-loop",
+              "leftValue": "={{ $json.from }}",
+              "rightValue": "={{ $env.BOT_GMAIL_ADDRESS }}",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            },
+            {
+              "id": "cond-auto-reply-type",
+              "leftValue": "={{ $json.headers && $json.headers['x-auto-reply-type'] ? $json.headers['x-auto-reply-type'] : '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cond-auto-submitted",
+              "leftValue": "={{ $json.headers && $json.headers['auto-submitted'] ? $json.headers['auto-submitted'] : 'no' }}",
+              "rightValue": "no",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cond-body-not-empty",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "cond-not-promotions",
+              "leftValue": "={{ ($json.labelIds || []).join(',') }}",
+              "rightValue": "CATEGORY_PROMOTIONS",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            },
+            {
+              "id": "cond-not-updates",
+              "leftValue": "={{ ($json.labelIds || []).join(',') }}",
+              "rightValue": "CATEGORY_UPDATES",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "filter-node",
+      "name": "Filter: Skip Auto-Replies and Junk",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [470, 300]
+    },
+    {
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "// Phase 5 Plan 03 — Build messages array for POST /chat\n// Contract: ai-service ChatRequest { messages: ChatMessage[1..10] }\n// where last message.role MUST be \"user\" (enforced by ai-service validator)\n\nconst emailText = ($json.text || $json.snippet || '').trim();\nconst subject = ($json.subject || '(no subject)').trim();\nconst threadId = $json.threadId;\nconst originalFrom = $json.from;\nconst messageId = $json.id;\n\n// Truncate to ai-service SEC-03 max question length (500 chars)\nconst MAX_CHARS = 500;\nlet userContent = `Subject: ${subject}\\n\\n${emailText}`;\nif (userContent.length > MAX_CHARS) {\n  userContent = userContent.substring(0, MAX_CHARS - 3) + '...';\n}\n\n// Thread history support is a Phase 5.5 enhancement; MVP sends single\n// user message per email. Phase 7 may fetch prior thread messages via\n// Gmail Thread > Get and prepend them to the messages array.\nconst messages = [\n  { role: 'user', content: userContent }\n];\n\nreturn {\n  json: {\n    messages,\n    threadId,\n    originalFrom,\n    subject,\n    messageId,\n    originalText: emailText\n  }\n};\n"
+      },
+      "id": "build-chat-messages-node",
+      "name": "Build Chat Messages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.AI_SERVICE_URL }}/chat",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messages: $json.messages }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": false
+            }
+          },
+          "retry": {
+            "maxTries": 3,
+            "waitBetweenTries": 2000
+          }
+        }
+      },
+      "id": "http-request-chat-node",
+      "name": "HTTP Request: ai-service /chat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [910, 300],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "reply",
+        "messageId": "={{ $('Build Chat Messages').item.json.messageId }}",
+        "message": "={{ $('HTTP Request: ai-service /chat').item.json.answer }}\n\n---\n\n> On {{ $('Gmail Trigger').item.json.date }}, {{ $('Build Chat Messages').item.json.originalFrom }} wrote:\n> {{ $('Build Chat Messages').item.json.originalText.replace(/\\n/g, '\\n> ') }}\n\n-- \n{{ $env.CANDIDATE_NAME }}\nGitHub: {{ $env.CANDIDATE_GITHUB }}\nPortfolio: {{ $env.CANDIDATE_PORTFOLIO }}\n\nThis reply was generated by an AI assistant trained on {{ $env.CANDIDATE_NAME }}'s professional background.",
+        "options": {
+          "attributionValue": ""
+        }
+      },
+      "id": "gmail-send-ai-reply-node",
+      "name": "Gmail Send: AI Reply",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1130, 220],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_AFTER_IMPORT",
+          "name": "Gmail Bot Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "reply",
+        "messageId": "={{ $('Build Chat Messages').item.json.messageId }}",
+        "message": "={{ \"Thank you for your message! I'm unable to provide an AI-generated reply right now, but I'll personally get back to you shortly.\\n\\nIn the meantime, feel free to reach me directly at \" + $env.CANDIDATE_CONTACT_EMAIL + \".\\n\\n-- \\n\" + $env.CANDIDATE_NAME + \"\\nGitHub: \" + $env.CANDIDATE_GITHUB + \"\\nPortfolio: \" + $env.CANDIDATE_PORTFOLIO }}",
+        "options": {
+          "attributionValue": ""
+        }
+      },
+      "id": "gmail-send-fallback-node",
+      "name": "Gmail Send: Fallback Reply",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1130, 500],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_AFTER_IMPORT",
+          "name": "Gmail Bot Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "addLabels",
+        "messageId": "={{ $('Build Chat Messages').item.json.messageId }}",
+        "labelIds": ["bot-replied"]
+      },
+      "id": "label-mark-replied-node",
+      "name": "Label: Mark as Replied",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [1350, 360],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "REPLACE_AFTER_IMPORT",
+          "name": "Gmail Bot Account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Filter: Skip Auto-Replies and Junk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter: Skip Auto-Replies and Junk": {
+      "main": [
+        [
+          {
+            "node": "Build Chat Messages",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Build Chat Messages": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request: ai-service /chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request: ai-service /chat": {
+      "main": [
+        [
+          {
+            "node": "Gmail Send: AI Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail Send: Fallback Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Send: AI Reply": {
+      "main": [
+        [
+          {
+            "node": "Label: Mark as Replied",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Send: Fallback Reply": {
+      "main": [
+        [
+          {
+            "node": "Label: Mark as Replied",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true,
+    "errorWorkflow": "email-bot-error-handler",
+    "timezone": "America/New_York"
+  },
+  "staticData": null,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "versionId": ""
+}
