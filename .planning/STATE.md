@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Core Resume API
 status: Executing Phase 05
-stopped_at: Completed 05-02 Task 1 (runbook scaffold); Task 2 GCP Console human-action deferred to DEFERRED-WORK.md
-last_updated: "2026-04-10T21:35:00.000Z"
+stopped_at: Completed 05-01-PLAN.md (Terraform n8n VM module + systemd unit) and 05-02-PLAN.md Task 1 (OAuth runbook scaffold)
+last_updated: "2026-04-10T21:42:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 1
@@ -17,7 +17,7 @@ progress:
 ## Current Position
 
 Phase: 05 (n8n-email-bot) — EXECUTING
-Plan: 1 of 4
+Plan: 3 of 4 (05-01 and 05-02 complete)
 
 ## Project Reference
 
@@ -105,15 +105,20 @@ All 4 above → Phase 8 (CI/CD wires everything, smoke tests verify end-to-end)
 
 ## Session Continuity
 
-**Last session:** 2026-04-10T21:35:00Z
-**Stopped at:** Completed 05-02-PLAN.md Task 1 (a5a6b25). Task 2 (GCP Console human-action) deferred to DEFERRED-WORK.md per scaffold-first mode.
+**Last session:** 2026-04-10T21:42:00Z
+**Stopped at:** Completed 05-01-PLAN.md (Terraform n8n-vm module + startup.sh + systemd unit) and 05-02-PLAN.md Task 1 (OAuth runbook scaffold). Plan 05-02 Task 2 (GCP Console human-action) deferred to DEFERRED-WORK.md per scaffold-first mode.
 
-**To resume:** When ready for manual GCP work, open DEFERRED-WORK.md and follow the "Plan 05-02 Task 2" entry (runs `n8n/docs/gmail-oauth-setup.md` end-to-end). Meanwhile, Plan 05-03 (n8n workflow) can proceed since it consumes the .env template, not the live secrets.
+**To resume:** Next plans are 05-03 (n8n workflow JSON) and 05-04 (smoke tests + phase summary). When ready for manual GCP work, open DEFERRED-WORK.md and run `terraform apply` in `terraform/n8n-vm/` followed by the "Plan 05-02 Task 2" OAuth runbook (`n8n/docs/gmail-oauth-setup.md`).
 
 **Next decision needed:** None — scaffold-first mode continues.
 
 ### Phase 05 Decisions
 
+- Plan 05-01: Terraform module uses ephemeral external IP on e2-micro (not IAP tunnel) for operator SSH — D-09 network access simplified for portfolio scope; firewall opens port 22 only.
+- Plan 05-01: cloud-platform service account scope on the VM enables future Secret Manager access for Gmail OAuth secrets without re-provisioning.
+- Plan 05-01: startup.sh enables n8n.service but deliberately does NOT start it — operator must scp docker-compose.yml + edit /opt/n8n/.env first, otherwise the unit would fail and be marked failed on first boot.
+- Plan 05-01: systemd unit uses Type=oneshot + RemainAfterExit=yes + Restart=on-failure (NOT Restart=always) to avoid double-start conflict with compose restart:unless-stopped (Pitfall #3).
+- Plan 05-01: Inline systemd unit heredoc in startup.sh is byte-for-byte identical to the committed n8n/systemd/n8n.service — single source of truth for the unit file, verified via diff.
 - Plan 05-02: Task 2 human-action checkpoint (Gmail OAuth GCP Console clicks) deferred to DEFERRED-WORK.md per scaffold-first session. Runbook, reference table, and .env template all in place.
 - Plan 05-02: D-02 exception documented — Web Application OAuth 2.0 clients require GCP Console (gcloud iap oauth-clients only creates IAP clients).
 
