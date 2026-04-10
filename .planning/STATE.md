@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Core Resume API
 status: Executing Phase 05
-stopped_at: Completed 05-01-PLAN.md (Terraform n8n VM module + systemd unit) and 05-02-PLAN.md Task 1 (OAuth runbook scaffold)
-last_updated: "2026-04-10T21:42:00.000Z"
+stopped_at: Completed 05-03-PLAN.md Task 1 (n8n workflow JSON + build guide + import runbook); Task 2 deferred to DEFERRED-WORK.md per scaffold-first
+last_updated: "2026-04-10T22:15:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 23
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -17,7 +17,7 @@ progress:
 ## Current Position
 
 Phase: 05 (n8n-email-bot) — EXECUTING
-Plan: 3 of 4 (05-01 and 05-02 complete)
+Plan: 4 of 4 (05-01, 05-02, 05-03 complete — 05-03 Task 2 deferred)
 
 ## Project Reference
 
@@ -105,10 +105,10 @@ All 4 above → Phase 8 (CI/CD wires everything, smoke tests verify end-to-end)
 
 ## Session Continuity
 
-**Last session:** 2026-04-10T21:42:00Z
-**Stopped at:** Completed 05-01-PLAN.md (Terraform n8n-vm module + startup.sh + systemd unit) and 05-02-PLAN.md Task 1 (OAuth runbook scaffold). Plan 05-02 Task 2 (GCP Console human-action) deferred to DEFERRED-WORK.md per scaffold-first mode.
+**Last session:** 2026-04-10T22:15:00Z
+**Stopped at:** Completed 05-03-PLAN.md Task 1 (n8n workflow JSON `email-bot.json` + `error-handler.json`, build guide, import runbook). Plan 05-03 Task 2 (n8n UI import + credential re-link + dry-run) deferred to DEFERRED-WORK.md per scaffold-first mode.
 
-**To resume:** Next plans are 05-03 (n8n workflow JSON) and 05-04 (smoke tests + phase summary). When ready for manual GCP work, open DEFERRED-WORK.md and run `terraform apply` in `terraform/n8n-vm/` followed by the "Plan 05-02 Task 2" OAuth runbook (`n8n/docs/gmail-oauth-setup.md`).
+**To resume:** Next plan is 05-04 (smoke tests + phase summary). When ready for manual live work, resolve DEFERRED-WORK.md entries in order: (1) Plan 05-01 `terraform apply`, (2) Plan 05-02 Task 2 OAuth runbook, (3) Plan 05-03 Task 2 workflow import runbook (`n8n/docs/workflow-import-runbook.md`).
 
 **Next decision needed:** None — scaffold-first mode continues.
 
@@ -121,6 +121,11 @@ All 4 above → Phase 8 (CI/CD wires everything, smoke tests verify end-to-end)
 - Plan 05-01: Inline systemd unit heredoc in startup.sh is byte-for-byte identical to the committed n8n/systemd/n8n.service — single source of truth for the unit file, verified via diff.
 - Plan 05-02: Task 2 human-action checkpoint (Gmail OAuth GCP Console clicks) deferred to DEFERRED-WORK.md per scaffold-first session. Runbook, reference table, and .env template all in place.
 - Plan 05-02: D-02 exception documented — Web Application OAuth 2.0 clients require GCP Console (gcloud iap oauth-clients only creates IAP clients).
+- Plan 05-03: D-14 `/chat` endpoint override honored throughout workflow JSON, build guide, and import runbook — REQUIREMENTS.md §EMAIL-03 text ("/ai/ask") predates the Phase 5 context session and is superseded for thread-aware conversations.
+- Plan 05-03: AI_SERVICE_URL has no `:8090` port suffix — RESEARCH.md code examples show `:8090` for local docker-compose only; Cloud Run terminates HTTPS on 443 implicitly. Both workflow JSON and docs explicitly warn against copying the dev example.
+- Plan 05-03: Single-message `/chat` MVP — Code node emits one `{role:'user',content}` per email. Thread history fetching (Gmail Thread > Get) deferred to Phase 5.5+ as a pure code-node enhancement; ai-service already supports up to 10-message history.
+- Plan 05-03: All Gmail node credential IDs use `REPLACE_AFTER_IMPORT` placeholder (Pitfall #5). Import runbook Step 7 walks operator through re-linking `Gmail Bot Account` on all 4 Gmail nodes.
+- Plan 05-03: Task 2 human-verify checkpoint (live n8n import + dry-run) deferred to DEFERRED-WORK.md per scaffold-first session. Depends on Plan 05-01 VM + Plan 05-02 OAuth + Phase 4 ai-service deployment.
 
 ---
 *State updated: 2026-04-09 after completing plan 04-02*
