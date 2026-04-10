@@ -61,3 +61,58 @@ Items scaffolded in code but awaiting live credentials, GCP Console clicks, or d
 - Manual Gmail Trigger execution succeeds (0 items is OK if inbox is empty)
 
 **[ ] Completed on: ____**
+
+### Plan 05-04 Task 3: Execute end-to-end smoke test + provision uptime check
+
+**Why deferred:** Scaffold-first session. This is the final Phase 5 phase gate — requires (a) a running deployed VM, (b) Gmail OAuth Published with live credentials, (c) ai-service `/chat` live on Cloud Run, (d) sending real emails and waiting for real AI replies, (e) a live `sudo reboot` of the VM. None of the live infrastructure exists yet.
+
+**Prerequisites (must ALL be resolved first):**
+1. Phase 4 04-04 Task 2: `gcp-setup.sh` executed, gemini-api-key in Secret Manager
+2. ai-service deployed to Cloud Run (currently Phase 8 deliverable — deferred)
+3. Plan 05-01 Task deferred: `terraform apply` — VM provisioned
+4. Plan 05-02 Task 2 deferred: Gmail OAuth Published, creds in /opt/n8n/.env
+5. Plan 05-03 Task 2 deferred: n8n workflow imported, credentials re-linked
+6. `/opt/n8n/.env` on VM populated with real AI_SERVICE_URL (Cloud Run URL, NO :8090)
+
+**Part A — Execute the smoke test runbook**
+
+Follow `n8n/docs/end-to-end-smoke-test.md` from top to bottom. Minimum passing checks:
+- [ ] Pre-flight: VM active, swap 2G, container Up, n8n /healthz 200, ai-service /health 200
+- [ ] Test 1 — Happy Path: real email receives AI reply with quote + signature within 6 min
+- [ ] Test 2 — Filter rejection: at least one junk case (self-loop or empty body) confirmed skipped
+- [ ] Test 3 — Fallback path: with AI_SERVICE_URL unreachable, fallback reply delivered
+- [ ] Test 4 — VM reboot: `sudo reboot`, wait 90s, `systemctl is-active n8n` = active, new email processed
+- [ ] Test 5 — Record day-0 date for 8-day OAuth persistence check (run later)
+
+**Part B — Provision GCP uptime check**
+
+```bash
+PROJECT_ID=<your-project> ALERT_EMAIL=<your-email> \
+  bash gcp/monitoring/n8n-uptime-check.sh
+```
+Verify:
+```bash
+gcloud monitoring uptime list-configs --project=$PROJECT_ID \
+  --filter="displayName=n8n-vm-uptime"
+```
+must return non-empty.
+
+**Part C — EMAIL-05 status:** Already satisfied in commit `1ba4ea4` (n8n/workflows/email-bot.json + error-handler.json committed in plan 05-03). No action needed.
+
+**Part D — Fill Results Table**
+
+Edit `n8n/docs/end-to-end-smoke-test.md` and fill dates/results for Tests 1-4. Commit:
+```bash
+git add n8n/docs/end-to-end-smoke-test.md
+git commit -m "docs(05): record smoke test results"
+```
+
+**Part E — Update phase summary**
+
+Edit `.planning/phases/05-n8n-email-bot/05-PHASE-SUMMARY.md`:
+- Replace "Completed: <date — filled in after smoke test>" with real date
+- Flip [ ] → ✅ in Requirements Delivered table for EMAIL-01..EMAIL-06 (EMAIL-07 stays pending until day +8)
+- Flip [ ] → [x] in Phase Exit Criteria for passed tests
+- Copy filled Results Table from end-to-end-smoke-test.md into the Smoke Test Results section
+
+**[ ] Completed on: ____**
