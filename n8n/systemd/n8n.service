@@ -1,0 +1,21 @@
+[Unit]
+Description=n8n Email Bot (Docker Compose) - Phase 5 EMAIL-06
+Documentation=https://github.com/[repo]/blob/main/.planning/phases/05-n8n-email-bot/05-01-PLAN.md
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/n8n
+EnvironmentFile=/opt/n8n/.env
+ExecStart=/usr/bin/docker compose up -d --remove-orphans
+ExecStop=/usr/bin/docker compose down
+ExecReload=/usr/bin/docker compose restart
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
