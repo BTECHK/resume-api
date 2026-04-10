@@ -2,22 +2,22 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Core Resume API
-status: Executing Phase 05
-stopped_at: Completed 05-03-PLAN.md Task 1 (n8n workflow JSON + build guide + import runbook); Task 2 deferred to DEFERRED-WORK.md per scaffold-first
-last_updated: "2026-04-10T22:15:00.000Z"
+status: Phase 05 complete (scaffold-first) — ready for /gsd:verify-work
+stopped_at: Completed 05-04-PLAN.md Tasks 1+2 (uptime check script + smoke test runbook + phase summary skeleton); Task 3 deferred to DEFERRED-WORK.md; Task 3b skipped pending smoke test execution
+last_updated: "2026-04-10T23:30:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 23
-  completed_plans: 8
+  completed_plans: 9
 ---
 
 # Project State
 
 ## Current Position
 
-Phase: 05 (n8n-email-bot) — EXECUTING
-Plan: 4 of 4 (05-01, 05-02, 05-03 complete — 05-03 Task 2 deferred)
+Phase: 05 (n8n-email-bot) — SCAFFOLD-FIRST COMPLETE
+Plan: 4 of 4 (all four plans landed; live checkpoints deferred to DEFERRED-WORK.md)
 
 ## Project Reference
 
@@ -105,12 +105,12 @@ All 4 above → Phase 8 (CI/CD wires everything, smoke tests verify end-to-end)
 
 ## Session Continuity
 
-**Last session:** 2026-04-10T22:15:00Z
-**Stopped at:** Completed 05-03-PLAN.md Task 1 (n8n workflow JSON `email-bot.json` + `error-handler.json`, build guide, import runbook). Plan 05-03 Task 2 (n8n UI import + credential re-link + dry-run) deferred to DEFERRED-WORK.md per scaffold-first mode.
+**Last session:** 2026-04-10T23:30:00Z
+**Stopped at:** Completed 05-04-PLAN.md Tasks 1 (uptime check script `gcp/monitoring/n8n-uptime-check.sh` + README + `n8n/docs/end-to-end-smoke-test.md` runbook) and Task 2 (`.planning/phases/05-n8n-email-bot/05-PHASE-SUMMARY.md` skeleton). Task 3 (checkpoint:human-verify — live smoke test + uptime check provision + summary update) deferred to DEFERRED-WORK.md. Task 3b (auto post-checkpoint summary finalization) skipped — its edit instructions are re-parented to Part E of the deferred-work entry. EMAIL-05 already satisfied by commit 1ba4ea4.
 
-**To resume:** Next plan is 05-04 (smoke tests + phase summary). When ready for manual live work, resolve DEFERRED-WORK.md entries in order: (1) Plan 05-01 `terraform apply`, (2) Plan 05-02 Task 2 OAuth runbook, (3) Plan 05-03 Task 2 workflow import runbook (`n8n/docs/workflow-import-runbook.md`).
+**To resume:** Phase 5 scaffold-first is complete. Run `/gsd:verify-work 05` to validate. When the live deployed stack is ready, resolve DEFERRED-WORK.md Phase 5 entries in order: (1) Plan 05-02 Task 2 Gmail OAuth Publish, (2) Plan 05-01 `terraform apply`, (3) Plan 05-03 Task 2 workflow import, (4) Plan 05-04 Task 3 end-to-end smoke test + summary finalization (Part E).
 
-**Next decision needed:** None — scaffold-first mode continues.
+**Next decision needed:** None — Phase 5 scaffold complete. Phase 6 (React Chatbot) is independent and can proceed in parallel.
 
 ### Phase 05 Decisions
 
@@ -126,6 +126,10 @@ All 4 above → Phase 8 (CI/CD wires everything, smoke tests verify end-to-end)
 - Plan 05-03: Single-message `/chat` MVP — Code node emits one `{role:'user',content}` per email. Thread history fetching (Gmail Thread > Get) deferred to Phase 5.5+ as a pure code-node enhancement; ai-service already supports up to 10-message history.
 - Plan 05-03: All Gmail node credential IDs use `REPLACE_AFTER_IMPORT` placeholder (Pitfall #5). Import runbook Step 7 walks operator through re-linking `Gmail Bot Account` on all 4 Gmail nodes.
 - Plan 05-03: Task 2 human-verify checkpoint (live n8n import + dry-run) deferred to DEFERRED-WORK.md per scaffold-first session. Depends on Plan 05-01 VM + Plan 05-02 OAuth + Phase 4 ai-service deployment.
+- Plan 05-04: TCP-22 uptime check chosen over HTTP `/healthz` — n8n port 5678 is not publicly reachable per D-09; HTTP probing would require an nginx reverse-proxy sidecar or Ops Agent, both out of Phase 5 scope.
+- Plan 05-04: Phase summary skeleton written BEFORE the human checkpoint (Task 2) so a durable artifact exists even if the checkpoint is interrupted; Task 3b is the "finalize skeleton" companion that fills in Results Table post-smoke-test.
+- Plan 05-04: EMAIL-05 already satisfied by commit `1ba4ea4` (Plan 05-03 committed both workflow JSON files); the plan's Task 3 Part C is a no-op. Phase summary pre-marks EMAIL-05 ✅ with commit hash as proof.
+- Plan 05-04: Task 3b (auto post-checkpoint) SKIPPED (not deferred) — its edits cannot run without Task 3 data. Instructions re-parented to Part E of the DEFERRED-WORK.md Plan 05-04 Task 3 entry.
 
 ---
 *State updated: 2026-04-09 after completing plan 04-02*
