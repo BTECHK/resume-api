@@ -10,7 +10,7 @@ def get_db_connection():
     # Ensure the data directory exists
     os.makedirs(os.path.dirname(DATABASE_FILE), exist_ok=True)
     conn = sqlite3.connect(DATABASE_FILE)
-    # No row_factory needed for simple inserts
+    conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():

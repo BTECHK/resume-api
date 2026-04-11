@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 
 import time
 import collections
+from datetime import datetime, timezone
 from typing import List, Optional
 
 # Import models and database modules
@@ -289,6 +290,7 @@ def get_analytics_queries(domain: Optional[str] = None, limit: int = 50, offset:
     results = []
     for q in queries:
         query_dict = dict(q)
+        query_dict['timestamp'] = datetime.fromtimestamp(query_dict['timestamp'], tz=timezone.utc).isoformat()
         query_dict['client_ip'] = 'N/A'
         results.append(query_dict)
     return results
