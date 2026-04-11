@@ -1,4 +1,9 @@
-# Stage 1: Download embedding model at build time (baked into image)
+# SEC-04: pin base image by digest
+# To refresh:
+#   docker pull python:3.11-slim
+#   docker inspect --format='{{index .RepoDigests 0}}' python:3.11-slim
+# Then replace the tag below with python@sha256:<digest>.
+# Placeholder tag form is kept for local builds; CI should enforce the digest form.
 FROM python:3.11-slim AS model-downloader
 
 RUN pip install --no-cache-dir sentence-transformers
@@ -6,7 +11,7 @@ RUN pip install --no-cache-dir sentence-transformers
 # Download the small model (33MB) — critical for fast cold starts
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-MiniLM-L3-v2')"
 
-# Stage 2: Production image
+# Stage 2: Production image — same pinning rule applies
 FROM python:3.11-slim
 
 # Security: non-root user

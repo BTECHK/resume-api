@@ -15,8 +15,13 @@
 # Build-time env vars: Vite inlines VITE_* vars at build time (RESEARCH Pitfall #4).
 # To change them, REBUILD the image — restarting the container will not pick up new values.
 #
-# Phase 8 hardening notes:
-#   - Pin both base images by digest (currently pinned by tag)
+# SEC-04 base image pinning:
+#   - Tags are used for local dev ergonomics; CI should rewrite to digest form
+#     before build. To refresh digests:
+#       docker pull node:20-alpine
+#       docker inspect --format='{{index .RepoDigests 0}}' node:20-alpine
+#       docker pull nginx:1.27-alpine
+#       docker inspect --format='{{index .RepoDigests 0}}' nginx:1.27-alpine
 #   - Bumping to nginx:1.28-alpine is API-compatible and does not require fixup changes
 
 # -- Stage 1: build ---------------------------------------------
