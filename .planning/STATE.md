@@ -1,23 +1,26 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: Core Resume API
-status: Phase 05 complete (scaffold-first) — ready for /gsd:verify-work
-stopped_at: Completed 05-04-PLAN.md Tasks 1+2 (uptime check script + smoke test runbook + phase summary skeleton); Task 3 deferred to DEFERRED-WORK.md; Task 3b skipped pending smoke test execution
-last_updated: "2026-04-10T23:30:00.000Z"
+milestone: v2.0
+milestone_name: Resume AI Platform
+status: Phase 05 scaffold-complete (live validation deferred); Phase 06 planned (4 plans, PASS_WITH_NOTES, ready for execute-phase)
+stopped_at: Session ended after gsd-plan-checker returned PASS_WITH_NOTES for Phase 6. Next action on resume = /gsd:execute-phase 6 (scaffold-first mode). No uncommitted work.
+last_updated: "2026-04-10T23:59:00.000Z"
 progress:
-  total_phases: 4
-  completed_phases: 1
+  total_phases: 5
+  completed_phases: 0
   total_plans: 23
   completed_plans: 9
+  phase_06_planned: true
+  phase_06_plans: 4
 ---
 
 # Project State
 
 ## Current Position
 
-Phase: 05 (n8n-email-bot) — SCAFFOLD-FIRST COMPLETE
-Plan: 4 of 4 (all four plans landed; live checkpoints deferred to DEFERRED-WORK.md)
+Phase: 06 (react-chatbot-frontend) — PLANNED, ready for `/gsd:execute-phase 6`
+Phase 05 (n8n-email-bot) — SCAFFOLD-COMPLETE, live validation deferred to DEFERRED-WORK.md
+Plans remaining in Phase 6: 4 of 4 (all written, plan-checked PASS_WITH_NOTES)
 
 ## Project Reference
 
@@ -105,12 +108,55 @@ All 4 above → Phase 8 (CI/CD wires everything, smoke tests verify end-to-end)
 
 ## Session Continuity
 
-**Last session:** 2026-04-10T23:30:00Z
-**Stopped at:** Completed 05-04-PLAN.md Tasks 1 (uptime check script `gcp/monitoring/n8n-uptime-check.sh` + README + `n8n/docs/end-to-end-smoke-test.md` runbook) and Task 2 (`.planning/phases/05-n8n-email-bot/05-PHASE-SUMMARY.md` skeleton). Task 3 (checkpoint:human-verify — live smoke test + uptime check provision + summary update) deferred to DEFERRED-WORK.md. Task 3b (auto post-checkpoint summary finalization) skipped — its edit instructions are re-parented to Part E of the deferred-work entry. EMAIL-05 already satisfied by commit 1ba4ea4.
+**Last session:** 2026-04-10T23:59:00Z
+**Stopped at:** End of `/gsd:plan-phase 6` workflow. All four Phase 6 plan files written and verified by gsd-plan-checker with verdict PASS_WITH_NOTES (6 minor non-blocking notes, zero critical issues). API client in Plan 06-03 byte-matches `ai-service/main.py` Pydantic schemas. Scaffold-first pattern honored (no live-deploy task commands). DEFERRED-WORK.md append in Plan 06-04 cleanly appends to existing Phase 5 entries.
 
-**To resume:** Phase 5 scaffold-first is complete. Run `/gsd:verify-work 05` to validate. When the live deployed stack is ready, resolve DEFERRED-WORK.md Phase 5 entries in order: (1) Plan 05-02 Task 2 Gmail OAuth Publish, (2) Plan 05-01 `terraform apply`, (3) Plan 05-03 Task 2 workflow import, (4) Plan 05-04 Task 3 end-to-end smoke test + summary finalization (Part E).
+**Artifacts produced this session:**
+- `.planning/phases/06-react-chatbot-frontend/06-CONTEXT.md` (200 lines, D-01..D-13 locked)
+- `.planning/phases/06-react-chatbot-frontend/06-RESEARCH.md` (1565 lines, 8 tracks, code snippets)
+- `.planning/phases/06-react-chatbot-frontend/06-01-PLAN.md` (459 lines — Vite/React/TS/Tailwind scaffold)
+- `.planning/phases/06-react-chatbot-frontend/06-02-PLAN.md` (642 lines — Landing + Chat UI + Apple HIG)
+- `.planning/phases/06-react-chatbot-frontend/06-03-PLAN.md` (431 lines — API client + `/chat` integration)
+- `.planning/phases/06-react-chatbot-frontend/06-04-PLAN.md` (731 lines — Dockerfile + nginx + deploy.sh + DEFERRED-WORK entries)
 
-**Next decision needed:** None — Phase 5 scaffold complete. Phase 6 (React Chatbot) is independent and can proceed in parallel.
+All planning artifacts are on disk in the gitignored `.planning/` tree. Nothing is committed (matches prior phase convention — only SUMMARY files are force-tracked).
+
+**To resume — primary action:**
+```
+/gsd:execute-phase 6
+```
+Use scaffold-first mode. Plans run sequentially (06-01 → 06-02 → 06-03 → 06-04), no parallel waves possible (each plan touches files the next builds on).
+
+**To resume — deferred work order (when live GCP stack is ready):**
+1. Phase 4 04-04 Task 2 — run `gcp-setup.sh` (blocks everything else)
+2. Deploy ai-service to Cloud Run (Phase 8 CI/CD, can be done manually earlier)
+3. Phase 5 05-01 — `cd terraform/n8n-vm && terraform init && terraform apply`
+4. Phase 5 05-02 Task 2 — Gmail OAuth Publish to Production (per `n8n/docs/gmail-oauth-setup.md`)
+5. Phase 5 05-03 Task 2 — n8n workflow import + credential re-link (per `n8n/docs/workflow-import-runbook.md`)
+6. Phase 5 05-04 Task 3 — end-to-end smoke test + uptime check + Phase Summary Part E
+7. (After Phase 6 execution) Phase 6 deferred Tasks A-E — Docker build, push, Cloud Run deploy, ALLOWED_ORIGINS swap, smoke test
+
+**Next decision needed:** None. Just run `/gsd:execute-phase 6` to continue, or tackle deferred work live.
+
+### Phase 06 Decisions (locked in 06-CONTEXT.md)
+
+- D-01: React Router v7 data router (`react-router` package, NOT `react-router-dom` — Pitfall #1)
+- D-02: Apple Human Interface aesthetic — system font stack, generous whitespace, glass/blur headers, `rounded-2xl`, warm off-white `#fafaf9`
+- D-03: Direct CORS to ai-service Cloud Run URL (no reverse proxy, no same-origin StaticFiles mount)
+- D-04: Scaffold-first mode (same as Phase 5) — defer `docker build` + `gcloud run deploy` + CORS origin swap to DEFERRED-WORK.md
+- D-05: React 19.2 + Vite 8.0 + TypeScript 6 + Tailwind v4.2 (CSS-first `@import "tailwindcss"` + `@theme` in `index.css`, NO `tailwind.config.ts`)
+- D-06: Cloud Run service name `resume-chatbot`, region `us-central1`, port 8080
+- D-07: Multi-stage Dockerfile — `node:20-alpine` build → `nginx:1.27-alpine` serve (digest pinning deferred to Phase 8)
+- D-08: Landing hero + 2 CTAs (Chat → `/chat` Link, Email → native `mailto:`)
+- D-09: Chat screen = header + scrollable message list + typing indicator + bottom textarea (Enter to send, 500 char client cap mirrors SEC-03)
+- D-10: In-memory conversation state (`useState`), last 10 messages, NO localStorage persistence
+- D-11: Zero analytics / zero cookies / zero third-party scripts
+- D-12: New top-level `frontend/` directory (parallel to `ai-service/`)
+- D-13: No unit tests in Phase 6 — only `npm run build` smoke gate; Phase 7 handles testing per TEST-01..TEST-04
+- Dockerfile non-root fix (Pitfall #5): BOTH halves required — `chown /tmp/nginx.pid` in Dockerfile AND `pid /tmp/nginx.pid;` directive in nginx.conf. Plan 06-04 enforces both via grep-strict acceptance.
+- Auto dark mode via `prefers-color-scheme` — included (zero JS cost via Tailwind v4 `dark:` variant default)
+- `nginx:1.27-alpine` kept per D-07 lock (not bumped to 1.28 despite research suggestion — bump in Phase 8 hardening)
+- Dependency chain strictly sequential: 06-01 → 06-02 → 06-03 → 06-04 (no parallelism possible; 06-03 overwrites Chat.tsx which 06-02 creates; 06-04 COPYs full frontend tree)
 
 ### Phase 05 Decisions
 
