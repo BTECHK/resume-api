@@ -2,23 +2,26 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Core Resume API
-status: Phase 05 scaffold-complete (live validation deferred); Phase 06 planned (4 plans, PASS_WITH_NOTES, ready for execute-phase)
-stopped_at: Completed Plan 06-04 (dockerfile + nginx + deploy.sh + DEFERRED-WORK Phase 6). Phase 6 scaffold-complete; live deploy deferred to DEFERRED-WORK.md Tasks A-E.
-last_updated: "2026-04-11T16:24:56.120Z"
+status: v2.0 COMPLETE (scaffold-first) — all 5 phases shipped, live GCP steps tracked in DEFERRED-WORK.md
+stopped_at: Phase 8 scaffold-complete — CI workflow, Dockerfile digest notes, smoke tests, README narrative, 12 ADRs, multi-version diagram all landed. Pending manual steps: WIF provider creation, first push-to-main CI run, live smoke tests.
+last_updated: "2026-04-11T23:59:00.000Z"
 progress:
   total_phases: 5
-  completed_phases: 3
+  completed_phases: 5
   total_plans: 27
-  completed_plans: 16
+  completed_plans: 27
 ---
 
 # Project State
 
 ## Current Position
 
-Phase: 06 (react-chatbot-frontend) — PLANNED, ready for `/gsd:execute-phase 6`
-Phase 05 (n8n-email-bot) — SCAFFOLD-COMPLETE, live validation deferred to DEFERRED-WORK.md
-Plans remaining in Phase 6: 4 of 4 (all written, plan-checked PASS_WITH_NOTES)
+Phase: ALL DONE (v2.0 scaffold-first)
+Phase 04 (ai-service) — SCAFFOLD-COMPLETE (Cloud Run deploy deferred to DEFERRED-WORK)
+Phase 05 (n8n-email-bot) — SCAFFOLD-COMPLETE (Terraform apply + n8n UI import deferred)
+Phase 06 (react-chatbot-frontend) — SCAFFOLD-COMPLETE (Cloud Run deploy + ALLOWED_ORIGINS swap deferred)
+Phase 07 (differentiators-testing) — COMPLETE, 61 local tests pass + 25 importorskip-guarded for CI
+Phase 08 (cicd-hardening) — SCAFFOLD-COMPLETE (WIF provider + first CI run deferred)
 
 ## Project Reference
 
