@@ -75,3 +75,82 @@ class FakeGeminiClient:
 def fake_gemini_client():
     """Provide a FakeGeminiClient instance for endpoint tests."""
     return FakeGeminiClient()
+
+
+class _FakeRAG:
+    """Stand-in for ResumeRAG that skips Chroma/embedding setup."""
+    def __init__(self):
+        self._count = 42
+        self.last_query: str | None = None
+
+    @property
+    def collection(self):
+        return self
+
+    def count(self):
+        return self._count
+
+    def query_all(self, question: str, top_k: int = 3) -> dict:
+        self.last_query = question
+        # Default: high-confidence resume match (low distance)
+        lower = question.lower()
+        top_distance = 0.25
+        interview_chunks: list[str] = []
+        arch_chunks: list[str] = []
+        used_tiers = ["resume"]
+
+        if any(k in lower for k in ("leadership", "conflict", "tell me about a time", "weakness")):
+            interview_chunks = ["INTERVIEW PATTERN — leadership: respond with STAR framework"]
+            used_tiers.append("interview")
+        if any(k in lower for k in ("tech stack", "cloud run", "embedding model", "architecture")):
+            arch_chunks = ["ARCHITECTURE DECISION — Gemini 2.5 Flash on Cloud Run with Chroma RAG"]
+            used_tiers.append("arch")
+        if "bugatti" in lower or "favorite color" in lower:
+            top_distance = 1.1  # forces low_confidence path
+
+        return {
+            "resume_chunks": [
+                "The candidate has 8+ years of consulting experience.",
+                "Holds AWS Solutions Architect certification.",
+                "Skills: Python, TypeScript, React.",
+            ],
+            "interview_chunks": interview_chunks,
+            "arch_chunks": arch_chunks,
+            "top_distance": top_distance,
+            "used_tiers": used_tiers,
+        }
+
+    def query(self, question: str, top_k: int = 3):
+        return self.query_all(question, top_k)["resume_chunks"]
+
+
+@pytest.fixture
+def fake_rag():
+    """Provide a FakeRAG instance for endpoint tests."""
+    return _FakeRAG()
+
+
+@pytest.fixture
+def test_client(monkeypatch, fake_gemini_client, fake_rag, tmp_path):
+    """FastAPI TestClient with RAG and Gemini replaced by fakes.
+
+    Skips automatically if main.py's runtime deps aren't installed locally.
+    """
+    pytest.importorskip("slowapi")
+    pytest.importorskip("google.genai")
+    pytest.importorskip("chromadb")
+    from fastapi.testclient import TestClient
+
+    # Point unanswered log at tmp to isolate state between tests
+    monkeypatch.setenv("UNANSWERED_LOG_PATH", str(tmp_path / "unanswered.jsonl"))
+
+    import main
+    monkeypatch.setattr(main, "get_genai_client", lambda: fake_gemini_client)
+    monkeypatch.setattr(main, "get_rag", lambda: fake_rag)
+
+    # Reset per-test flagged-IP state so rate limiting doesn't bleed between tests
+    from security import _flagged_ips
+    _flagged_ips.clear()
+
+    with TestClient(main.app) as client:
+        yield client
