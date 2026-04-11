@@ -1,6 +1,80 @@
 # Resume API — Architecture Diagram
 
-## System Overview
+## Multi-Version Topology (V1 + V2 + V3)
+
+This is the current state of the project after Phases 4-8. Three recruiter-facing surfaces share one AI backend.
+
+```mermaid
+graph TB
+    subgraph "Recruiters"
+        EMAIL[Recruiter Email]
+        BROWSER[Recruiter Browser]
+        CURL[API Consumer / Swagger]
+    end
+
+    subgraph "V2 — Email Bot (Phase 5)"
+        N8N[n8n on e2-micro VM<br/>5-min Gmail poll]
+        GMAIL[Gmail OAuth<br/>Production mode]
+    end
+
+    subgraph "V3 — Chatbot (Phase 6)"
+        FE[React 19 + Vite 8<br/>nginx:1.27-alpine<br/>Cloud Run]
+    end
+
+    subgraph "V1 — REST API (Phases 1-3)"
+        API[FastAPI<br/>resume-api<br/>Cloud Run]
+    end
+
+    subgraph "Common Foundation (Phase 4 + 7)"
+        AI[ai-service FastAPI<br/>Cloud Run<br/>Chroma + Gemini 2.5 Flash<br/>2-tier RAG + ADR corpus]
+        UNLOG[(/tmp unanswered.jsonl<br/>Cloud Logging tail)]
+    end
+
+    subgraph "GCP Platform"
+        SM[Secret Manager<br/>GEMINI_API_KEY]
+        AR[Artifact Registry]
+        BQ[BigQuery<br/>Analytics]
+        SQ[(SQLite<br/>Operational)]
+    end
+
+    subgraph "CI/CD (Phase 8)"
+        GH[GitHub]
+        GA[GitHub Actions<br/>ci.yml<br/>WIF-authenticated]
+    end
+
+    EMAIL --> GMAIL
+    GMAIL --> N8N
+    N8N -->|POST /chat| AI
+
+    BROWSER --> FE
+    FE -->|POST /chat<br/>CORS-locked| AI
+
+    CURL --> API
+
+    API --> SQ
+    API --> BQ
+
+    AI -->|Similarity search| AI
+    AI -->|Generate| GEMINI[Gemini 2.5 Flash]
+    AI --> SM
+    AI -.low confidence.-> UNLOG
+
+    GH --> GA
+    GA -->|Paths filter| AR
+    AR -->|Deploy| API
+    AR -->|Deploy| AI
+    AR -->|Deploy| FE
+    GA -->|Smoke test| AI
+```
+
+**Legend:**
+- Solid arrows = request path
+- Dotted arrows = side-effect logging
+- CORS-locked = ai-service `ALLOWED_ORIGINS` pinned to FE Cloud Run URL
+
+## System Overview (V1 — Phases 1-3)
+
+Retained for historical reference.
 
 ```mermaid
 graph TB

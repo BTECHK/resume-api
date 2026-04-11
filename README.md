@@ -14,6 +14,7 @@
 ## Table of Contents
 
 - [Purpose](#purpose)
+- [Version Progression](#version-progression)
 - [Project Phases](#project-phases)
 - [Key Findings: When Tool Choice Matters](#key-findings-when-tool-choice-matters)
 - [SQL Query Progression](#sql-query-progression)
@@ -30,6 +31,36 @@
 - [Deployment](#deployment)
 - [Technologies Used](#technologies-used)
 - [Security](#security)
+
+---
+
+## Version Progression
+
+This repo tells a story in three versions. Each version keeps the previous one running and adds a new recruiter interaction surface on top of a shared AI backend.
+
+### V1 — REST API (Phases 1-3)
+
+Structured resume data served as JSON from a Cloud Run FastAPI app backed by SQLite + BigQuery. Analytics middleware, Locust load tests, Terraform IaC, GitHub Actions CI/CD. This is the foundation and is still live.
+
+**Recruiter experience:** `curl` or Swagger UI on the `/docs` endpoint.
+
+### V2 — Email Bot (Phase 5)
+
+A recruiter can email a Gmail address and get a grounded answer back within minutes. Implementation: an n8n workflow on an e2-micro VM polls Gmail every 5 minutes, forwards the email body to the AI service's `/chat` endpoint, and sends the response back over Gmail. The VM runs with a 2GB swap file so Docker + n8n stay inside the free-tier memory budget.
+
+**Recruiter experience:** reply to the hiring-email address, wait for the automated answer. See [`.planning/phases/05-n8n-email-bot/`](.planning/phases/05-n8n-email-bot/) for the full build.
+
+### V3 — Chatbot (Phase 6)
+
+A React 19 + Vite 8 + Tailwind v4 single-page app with a streaming-style chat UI. Recruiters ask questions in a browser and get grounded answers with source previews. Deployed on Cloud Run behind an nginx:1.27-alpine container (non-root, digest-pinnable). CORS-locked to the hosted domain.
+
+**Recruiter experience:** open the chatbot URL, ask questions, see sources.
+
+### Common foundation
+
+Every version shares the Phase 4 **ai-service**: a FastAPI app with Chroma-backed RAG, a paraphrase-MiniLM-L3-v2 embedding model (33MB, baked into the image), Gemini 2.5 Flash generation, slowapi rate limiting, regex-based injection detection, response sanitization, a two-tier retrieval stack (resume facts + interview patterns + architecture self-awareness), and an unanswered-questions JSONL log for weak retrieval matches. Phase 7 adds 86 tests (unit + integration + endpoint-level security) with a 70% coverage gate enforced in CI. Phase 8 wires the GitHub Actions pipeline that lints, scans, tests, builds, and deploys every push to main via Workload Identity Federation.
+
+See [`docs/adrs/`](docs/adrs/) for the 12 architecture decision records that go with this story.
 
 ---
 
