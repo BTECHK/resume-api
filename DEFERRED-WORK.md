@@ -329,3 +329,118 @@ gcloud run services describe ai-service --region us-central1 \
 | 422 Unprocessable Entity from `/chat` | Frontend message shape doesn't match Pydantic | Verify `frontend/src/lib/types.ts` matches `ai-service/main.py` lines 159–196 byte-for-byte |
 
 **[ ] Completed on: ____**
+
+---
+
+## Phase 7 — Deferred Manual Steps
+
+### Full test suite run
+
+**Why deferred:** Local Python env lacks `chromadb`, `sentence-transformers`, `slowapi`, `google-genai`. 25 of 86 tests are guarded via `pytest.importorskip` and skip cleanly.
+
+**Steps to complete later:**
+1. `cd ai-service && pip install -r requirements.txt`
+2. `pytest`
+3. Expect: 86 passed, coverage >= 70% across modules
+
+**[ ] Completed on: ____**
+
+### Coverage gate promotion
+
+**Why deferred:** `--cov-fail-under=70` lives in the CI workflow (`.github/workflows/ci.yml` job `test-ai`) rather than `ai-service/pytest.ini`. Local runs without ML deps would otherwise always fail the threshold.
+
+**Steps to complete later (optional):**
+1. Once local env reliably has all deps, edit `ai-service/pytest.ini` and append `--cov-fail-under=70` to `addopts`
+2. Remove the duplicate `--cov-fail-under=70` from `.github/workflows/ci.yml`
+
+**[ ] Completed on: ____**
+
+---
+
+## Phase 8 — Deferred Manual Steps
+
+### CICD-03: Workload Identity Federation provider creation
+
+**Why deferred:** Requires `gcp-setup.sh` from Phase 4 to have run (billing + project exists) and requires GitHub repo settings access.
+
+**Steps to complete later:**
+1. Get numeric repo ID: `gh api repos/BTECHK/resume-api-repo --jq .id`
+2. Run in GCP:
+   ```bash
+   PROJECT_ID=<your-project-id>
+   PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format='value(projectNumber)')
+   gcloud iam workload-identity-pools create "github-pool" \
+     --project="$PROJECT_ID" --location="global" --display-name="GitHub Pool"
+   gcloud iam workload-identity-pools providers create-oidc "github-provider" \
+     --project="$PROJECT_ID" --location="global" \
+     --workload-identity-pool="github-pool" \
+     --display-name="GitHub provider" \
+     --attribute-mapping="google.subject=assertion.sub,attribute.repository=assertion.repository,attribute.repository_id=assertion.repository_id" \
+     --attribute-condition="assertion.repository_id == '<NUMERIC_REPO_ID>'" \
+     --issuer-uri="https://token.actions.githubusercontent.com"
+   gcloud iam service-accounts create cicd-runner --project=$PROJECT_ID
+   gcloud iam service-accounts add-iam-policy-binding \
+     cicd-runner@$PROJECT_ID.iam.gserviceaccount.com \
+     --project=$PROJECT_ID \
+     --role=roles/iam.workloadIdentityUser \
+     --member="principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/attribute.repository/BTECHK/resume-api-repo"
+   ```
+3. Grant the cicd-runner SA Cloud Run Admin, Artifact Registry Writer, IAM Service Account User roles
+4. Set GitHub repo secrets:
+   - `GCP_PROJECT_ID`
+   - `GCP_WIF_PROVIDER` = `projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider`
+   - `GCP_SERVICE_ACCOUNT` = `cicd-runner@$PROJECT_ID.iam.gserviceaccount.com`
+   - `ALLOWED_ORIGINS` = the frontend Cloud Run URL
+   - `VITE_AI_SERVICE_URL` = the ai-service Cloud Run URL
+
+**[ ] Completed on: ____**
+
+### First CI run
+
+**Why deferred:** No commits pushed to a configured remote yet and the WIF provider doesn't exist.
+
+**Steps to complete later:**
+1. Ensure all 5 GitHub secrets above are set
+2. Push to `main`: `git push origin main`
+3. Watch the run at https://github.com/BTECHK/resume-api-repo/actions
+4. Expect: path-filtered jobs for any changed paths, deploy only if `main`
+
+**[ ] Completed on: ____**
+
+### SEC-04: Base image digest pinning
+
+**Why deferred:** Digests change weekly; pinning now would block builds by next week.
+
+**Steps to complete later (per Dockerfile):**
+```bash
+docker pull python:3.11-slim
+docker inspect --format='{{index .RepoDigests 0}}' python:3.11-slim
+docker pull node:20-alpine
+docker inspect --format='{{index .RepoDigests 0}}' node:20-alpine
+docker pull nginx:1.27-alpine
+docker inspect --format='{{index .RepoDigests 0}}' nginx:1.27-alpine
+```
+Then replace each `FROM python:3.11-slim` with `FROM python@sha256:<digest>` in `ai-service/Dockerfile`, same for `frontend/Dockerfile`. Commit with a monthly cadence.
+
+**[ ] Completed on: ____**
+
+### INT-01..04: Smoke tests against live services
+
+**Why deferred:** Scripts are authored but require live Cloud Run URLs + (for email) n8n VM + Gmail OAuth.
+
+**Steps to complete later:**
+```bash
+export AI_SERVICE_URL=https://ai-service-xxxxx.run.app
+python scripts/smoke/smoke_ai_ask.py
+python scripts/smoke/smoke_chat.py
+
+# Runs in-process against real Chroma:
+pip install -r ai-service/requirements.txt
+python scripts/smoke/smoke_rag_ingest.py
+
+# Requires n8n webhook URL (after Phase 5 manual steps):
+export N8N_WEBHOOK_URL=https://n8n.example.com/webhook/email-test
+python scripts/smoke/smoke_email.py
+```
+
+**[ ] Completed on: ____**
