@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: Core Resume API
 status: Phase 05 scaffold-complete (live validation deferred); Phase 06 planned (4 plans, PASS_WITH_NOTES, ready for execute-phase)
-stopped_at: "Completed Plan 06-02 (landing + chat UI, Apple HIG). Next: /gsd:execute-phase 6 continues with Plan 06-03 (API client wiring)."
-last_updated: "2026-04-11T16:09:30.889Z"
+stopped_at: Completed Plan 06-04 (dockerfile + nginx + deploy.sh + DEFERRED-WORK Phase 6). Phase 6 scaffold-complete; live deploy deferred to DEFERRED-WORK.md Tasks A-E.
+last_updated: "2026-04-11T16:24:56.120Z"
 progress:
   total_phases: 5
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 27
-  completed_plans: 14
+  completed_plans: 16
 ---
 
 # Project State
@@ -105,11 +105,14 @@ All 4 above → Phase 8 (CI/CD wires everything, smoke tests verify end-to-end)
 - Billing budget documented as Console + gcloud CLI paths — Console is more reliable for billing APIs (04-04)
 - [Phase 06]: Plan 06-02: Apple HIG components (Header, MessageBubble, TypingIndicator, ChatInput) built with inline SVG only (zero icon libs), tokens consumed from index.css @theme via Tailwind arbitrary-value utilities
 - [Phase 06]: Plan 06-02: Chat.tsx seeded with hardcoded 3-message array (greeting + sample user/bot) + stub handleSend with 600ms fake reply — Plan 06-03 will rip these out and wire real /chat POST to ai-service
+- [Phase 06]: Plan 06-04: Multi-stage Dockerfile node:20-alpine -> nginx:1.27-alpine authored with both halves of Pitfall #5 non-root hardening (Dockerfile chown /tmp/nginx.pid + nginx.conf pid directive + 5 /tmp temp_paths)
+- [Phase 06]: Plan 06-04: deploy.sh uses --set-build-env-vars inline (Open Q5 resolved) + PLACEHOLDER refusal guard + git mode 100755; zero docker/gcloud executed (scaffold-first per D-04)
+- [Phase 06]: Plan 06-04: DEFERRED-WORK.md Phase 6 section appended with 5 tasks (A build, B env, C deploy, D CORS chicken-and-egg ALLOWED_ORIGINS update, E smoke test); 3 -> 8 checkboxes total
 
 ## Session Continuity
 
-**Last session:** 2026-04-11T16:09:19.591Z
-**Stopped at:** Completed Plan 06-02 (landing + chat UI, Apple HIG). Next: /gsd:execute-phase 6 continues with Plan 06-03 (API client wiring).
+**Last session:** 2026-04-11T16:24:44.704Z
+**Stopped at:** Completed Plan 06-04 (dockerfile + nginx + deploy.sh + DEFERRED-WORK Phase 6). Phase 6 scaffold-complete; live deploy deferred to DEFERRED-WORK.md Tasks A-E.
 
 **Artifacts produced this session:**
 
