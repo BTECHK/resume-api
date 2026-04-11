@@ -39,6 +39,7 @@ from security import (
 )
 from gcp_secrets import get_gemini_key  # NOTE: gcp_secrets.py, NOT stdlib secrets module
 from prompts import SYSTEM_PROMPT, CHAT_SYSTEM_PROMPT
+from unanswered import log_unanswered, is_low_confidence
 
 # ──────────────────────────────────────────────────────────────
 # Configuration
@@ -276,10 +277,24 @@ async def ask(request: Request, body: AskRequest):
             }
         )
 
-    # RAG retrieval
+    # RAG retrieval — multi-tier (RAG-05, RAG-06)
     rag = get_rag()
-    chunks = rag.query(body.question, top_k=3)
-    context = "\n\n---\n\n".join(chunks)
+    retrieval = rag.query_all(body.question, top_k=3)
+    chunks = retrieval["resume_chunks"]
+
+    # RAG-07: log weak-match questions for future KB improvement
+    if is_low_confidence(retrieval["top_distance"]):
+        log_unanswered(body.question, retrieval["top_distance"])
+
+    # Build merged context — tier 1 always, then supplementary tiers when present
+    context_parts = ["[RESUME FACTS]", "\n\n---\n\n".join(chunks)]
+    if retrieval["interview_chunks"]:
+        context_parts.append("[INTERVIEW PATTERNS — use only for behavioral questions]")
+        context_parts.append("\n\n---\n\n".join(retrieval["interview_chunks"]))
+    if retrieval["arch_chunks"]:
+        context_parts.append("[SYSTEM ARCHITECTURE]")
+        context_parts.append("\n\n---\n\n".join(retrieval["arch_chunks"]))
+    context = "\n\n".join(context_parts)
 
     # Gemini generation
     client = get_genai_client()
@@ -337,10 +352,24 @@ async def chat(request: Request, body: ChatRequest):
             }
         )
 
-    # RAG retrieval using the latest user question
+    # RAG retrieval using the latest user question — multi-tier (RAG-05, RAG-06)
     rag = get_rag()
-    chunks = rag.query(last_message, top_k=3)
-    context = "\n\n---\n\n".join(chunks)
+    retrieval = rag.query_all(last_message, top_k=3)
+    chunks = retrieval["resume_chunks"]
+
+    # RAG-07: log weak-match questions for future KB improvement
+    if is_low_confidence(retrieval["top_distance"]):
+        log_unanswered(last_message, retrieval["top_distance"])
+
+    # Build merged context
+    context_parts = ["[RESUME FACTS]", "\n\n---\n\n".join(chunks)]
+    if retrieval["interview_chunks"]:
+        context_parts.append("[INTERVIEW PATTERNS — use only for behavioral questions]")
+        context_parts.append("\n\n---\n\n".join(retrieval["interview_chunks"]))
+    if retrieval["arch_chunks"]:
+        context_parts.append("[SYSTEM ARCHITECTURE]")
+        context_parts.append("\n\n---\n\n".join(retrieval["arch_chunks"]))
+    context = "\n\n".join(context_parts)
 
     # Build conversation for Gemini
     client = get_genai_client()
