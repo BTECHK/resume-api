@@ -1,0 +1,24 @@
+[run]
+source = .
+omit =
+    tests/*
+    scrub.py
+    gcp-setup.sh
+    __pycache__/*
+    resume_corpus/*
+    .venv/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    def __repr__
+    raise AssertionError
+show_missing = True
+skip_covered = False
+precision = 1
+
+[html]
+directory = htmlcov
