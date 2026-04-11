@@ -1,17 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Resume AI Platform
+milestone: v1.0
+milestone_name: Core Resume API
 status: Phase 05 scaffold-complete (live validation deferred); Phase 06 planned (4 plans, PASS_WITH_NOTES, ready for execute-phase)
-stopped_at: Session ended after gsd-plan-checker returned PASS_WITH_NOTES for Phase 6. Next action on resume = /gsd:execute-phase 6 (scaffold-first mode). No uncommitted work.
-last_updated: "2026-04-10T23:59:00.000Z"
+stopped_at: "Completed Plan 06-02 (landing + chat UI, Apple HIG). Next: /gsd:execute-phase 6 continues with Plan 06-03 (API client wiring)."
+last_updated: "2026-04-11T16:09:30.889Z"
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 23
-  completed_plans: 9
-  phase_06_planned: true
-  phase_06_plans: 4
+  completed_phases: 2
+  total_plans: 27
+  completed_plans: 14
 ---
 
 # Project State
@@ -105,13 +103,16 @@ All 4 above → Phase 8 (CI/CD wires everything, smoke tests verify end-to-end)
 - RESPONSE_SCRUB_PATTERNS reimplements PII regex independently from scrub.py (belt-and-suspenders D-08/D-10) (04-02)
 - Dedicated service account 'resume-ai-service' (not default compute SA) for least-privilege secretAccessor access (04-04)
 - Billing budget documented as Console + gcloud CLI paths — Console is more reliable for billing APIs (04-04)
+- [Phase 06]: Plan 06-02: Apple HIG components (Header, MessageBubble, TypingIndicator, ChatInput) built with inline SVG only (zero icon libs), tokens consumed from index.css @theme via Tailwind arbitrary-value utilities
+- [Phase 06]: Plan 06-02: Chat.tsx seeded with hardcoded 3-message array (greeting + sample user/bot) + stub handleSend with 600ms fake reply — Plan 06-03 will rip these out and wire real /chat POST to ai-service
 
 ## Session Continuity
 
-**Last session:** 2026-04-10T23:59:00Z
-**Stopped at:** End of `/gsd:plan-phase 6` workflow. All four Phase 6 plan files written and verified by gsd-plan-checker with verdict PASS_WITH_NOTES (6 minor non-blocking notes, zero critical issues). API client in Plan 06-03 byte-matches `ai-service/main.py` Pydantic schemas. Scaffold-first pattern honored (no live-deploy task commands). DEFERRED-WORK.md append in Plan 06-04 cleanly appends to existing Phase 5 entries.
+**Last session:** 2026-04-11T16:09:19.591Z
+**Stopped at:** Completed Plan 06-02 (landing + chat UI, Apple HIG). Next: /gsd:execute-phase 6 continues with Plan 06-03 (API client wiring).
 
 **Artifacts produced this session:**
+
 - `.planning/phases/06-react-chatbot-frontend/06-CONTEXT.md` (200 lines, D-01..D-13 locked)
 - `.planning/phases/06-react-chatbot-frontend/06-RESEARCH.md` (1565 lines, 8 tracks, code snippets)
 - `.planning/phases/06-react-chatbot-frontend/06-01-PLAN.md` (459 lines — Vite/React/TS/Tailwind scaffold)
@@ -122,12 +123,15 @@ All 4 above → Phase 8 (CI/CD wires everything, smoke tests verify end-to-end)
 All planning artifacts are on disk in the gitignored `.planning/` tree. Nothing is committed (matches prior phase convention — only SUMMARY files are force-tracked).
 
 **To resume — primary action:**
+
 ```
 /gsd:execute-phase 6
 ```
+
 Use scaffold-first mode. Plans run sequentially (06-01 → 06-02 → 06-03 → 06-04), no parallel waves possible (each plan touches files the next builds on).
 
 **To resume — deferred work order (when live GCP stack is ready):**
+
 1. Phase 4 04-04 Task 2 — run `gcp-setup.sh` (blocks everything else)
 2. Deploy ai-service to Cloud Run (Phase 8 CI/CD, can be done manually earlier)
 3. Phase 5 05-01 — `cd terraform/n8n-vm && terraform init && terraform apply`
