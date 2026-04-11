@@ -116,3 +116,216 @@ Edit `.planning/phases/05-n8n-email-bot/05-PHASE-SUMMARY.md`:
 - Copy filled Results Table from end-to-end-smoke-test.md into the Smoke Test Results section
 
 **[ ] Completed on: ____**
+
+## Phase 6 — Deferred Manual Steps
+
+### Plan 06-04 Task A: Build and push the frontend Docker image to Artifact Registry
+
+**Why deferred:** Scaffold-first session per D-04. The Dockerfile is committed but no image has been built or pushed. This step requires `gcloud` authenticated against the GCP project, an existing Artifact Registry repo (provisioned by Phase 4 Plan 04-04 Task 2), and a tagged build. Cold-start of the container needs to be verified <500ms before Task C deploys it.
+
+**Prerequisites:**
+1. Phase 4 Plan 04-04 Task 2 completed: `cloud-run-source-deploy` Artifact Registry repo exists in `us-central1` (auto-created on first `gcloud run deploy --source .`, but can be pre-provisioned)
+2. `gcloud auth login` completed
+3. `gcloud config set project $PROJECT_ID` completed
+4. Docker Desktop (or compatible) running locally — only needed if you want to do a smoke build before Task C; otherwise Cloud Build does it
+5. `frontend/.env.local` populated with real values (see Task B)
+
+**Steps to complete later:**
+
+```bash
+# Optional: smoke-test the Dockerfile builds locally first
+cd frontend
+docker build \
+  --build-arg VITE_AI_SERVICE_URL="https://ai-service-XXXX-uc.a.run.app" \
+  --build-arg VITE_CANDIDATE_NAME="Your Name" \
+  --build-arg VITE_CANDIDATE_TITLE="Software Engineer" \
+  --build-arg VITE_CANDIDATE_EMAIL="hello@example.com" \
+  -t resume-chatbot:local .
+
+# Verify image size (should be <50MB total per D-07 target)
+docker images resume-chatbot:local --format '{{.Size}}'
+
+# Optional: smoke-test locally
+docker run --rm -p 8080:8080 resume-chatbot:local
+# In another terminal: curl http://localhost:8080/healthz  → expect "ok"
+# Then: curl -I http://localhost:8080/  → expect 200 with Cache-Control: no-cache
+# Stop with Ctrl+C
+cd ..
+```
+
+If the local smoke build passes, proceed to Task C — `gcloud run deploy --source .` will rebuild via Cloud Build automatically (no manual push required). If you want to push the local image to AR explicitly:
+
+```bash
+docker tag resume-chatbot:local us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/resume-chatbot:latest
+gcloud auth configure-docker us-central1-docker.pkg.dev
+docker push us-central1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/resume-chatbot:latest
+```
+
+**Acceptance:**
+- Image size <50MB
+- `curl http://localhost:8080/healthz` returns `ok`
+- `curl http://localhost:8080/chat` returns a 200 with `index.html` (SPA fallback works)
+- `curl http://localhost:8080/assets/<some-hashed-file>.js` returns 200 with `Cache-Control: public, max-age=31536000, immutable`
+
+**[ ] Completed on: ____**
+
+---
+
+### Plan 06-04 Task B: Populate frontend/.env.local with real VITE_* values
+
+**Why deferred:** `frontend/.env.local` is gitignored by design (contains environment-specific URLs, not secrets but not committable). Operator must create it once ai-service is live.
+
+**Prerequisites:**
+1. Phase 4 ai-service deployed to Cloud Run — its Cloud Run URL must be known. Get it via:
+   ```bash
+   gcloud run services describe ai-service --region us-central1 --format='value(status.url)'
+   ```
+
+**Steps to complete later:**
+
+```bash
+cd frontend
+cp .env.example .env.local
+
+# Edit .env.local and replace the four placeholder values:
+#   VITE_AI_SERVICE_URL=https://ai-service-XXXX-uc.a.run.app  (NO trailing slash, NO :8090)
+#   VITE_CANDIDATE_NAME=<your real name>
+#   VITE_CANDIDATE_TITLE=<your real title>
+#   VITE_CANDIDATE_EMAIL=<your real email>
+
+# Verify .env.local is gitignored (must NOT show up in git status)
+git status .env.local
+# Expected: empty output (file is ignored)
+```
+
+**CRITICAL:** `VITE_AI_SERVICE_URL` must be the **HTTPS Cloud Run URL with no trailing slash, no port, no path**. Example: `https://ai-service-abc123-uc.a.run.app`. The frontend appends `/chat` automatically.
+
+**[ ] Completed on: ____**
+
+---
+
+### Plan 06-04 Task C: Deploy frontend to Cloud Run via deploy.sh
+
+**Why deferred:** Requires Tasks A + B done, gcloud authenticated, and a real ai-service URL in `.env.local`.
+
+**Prerequisites:**
+1. Task A done (or skipped — `gcloud run deploy --source .` will trigger Cloud Build to rebuild from scratch)
+2. Task B done — `.env.local` populated
+3. `PROJECT_ID` env var exported
+4. `gcloud auth login` and `gcloud config set project $PROJECT_ID` done
+5. The Cloud Build API and Cloud Run API are enabled in the project (`gcloud services enable cloudbuild.googleapis.com run.googleapis.com`)
+
+**Steps to complete later:**
+
+```bash
+cd frontend
+export PROJECT_ID=<your-gcp-project>
+bash deploy.sh
+```
+
+The script will:
+1. Validate `.env.local` exists and has all four VITE_* vars
+2. Refuse to run if `VITE_AI_SERVICE_URL` still contains `PLACEHOLDER`
+3. Run `gcloud run deploy resume-chatbot --source . --set-build-env-vars ...` which uploads the source dir, runs Cloud Build with the Dockerfile, and deploys the resulting image
+4. Print the deployed Cloud Run service URL at the end — **save this URL for Task D**
+
+**Acceptance:**
+- `gcloud run services describe resume-chatbot --region us-central1 --format='value(status.url)'` returns a non-empty URL
+- The URL responds to `curl -I` with HTTP 200 and `Server: nginx`
+- `curl https://<service-url>/healthz` returns `ok`
+- Hard-refresh on `https://<service-url>/chat` renders the chat screen (SPA fallback works in production)
+
+**[ ] Completed on: ____**
+
+---
+
+### Plan 06-04 Task D: Update ai-service ALLOWED_ORIGINS to the new frontend Cloud Run URL and redeploy ai-service
+
+**Why deferred:** This is the chicken-and-egg CORS resolution (RESEARCH Track 5). The frontend needs the ai-service URL (Task B) and ai-service needs the frontend URL (this task). Cannot be done before Task C completes.
+
+**Why this matters (Pitfall #10 — HIGH):** Phase 4 ai-service `main.py` configures `CORSMiddleware` with `allow_credentials=True`. The CORS spec forbids wildcard `*` origins when credentials are enabled, so `ALLOWED_ORIGINS=*` will silently fail in the browser. The fix is to set `ALLOWED_ORIGINS` to the EXACT frontend Cloud Run URL — including `https://`, no trailing slash.
+
+**Prerequisites:**
+1. Task C completed — frontend Cloud Run URL is known
+2. ai-service is deployed and reachable
+3. `gcloud` authenticated against the project
+
+**Steps to complete later:**
+
+```bash
+# Get the frontend URL from Task C (or re-fetch it):
+FRONTEND_URL=$(gcloud run services describe resume-chatbot --region us-central1 --format='value(status.url)')
+echo "Frontend URL: $FRONTEND_URL"
+
+# Redeploy ai-service with the updated ALLOWED_ORIGINS env var.
+# Replace SERVICE with the actual ai-service Cloud Run service name.
+gcloud run services update ai-service \
+  --region us-central1 \
+  --update-env-vars "ALLOWED_ORIGINS=$FRONTEND_URL"
+
+# Verify the env var is set:
+gcloud run services describe ai-service --region us-central1 \
+  --format='value(spec.template.spec.containers[0].env)'
+```
+
+**CRITICAL formatting rules:**
+- The URL must start with `https://`
+- NO trailing slash
+- NO path
+- Comma-separated if you want multiple origins (e.g. dev + prod): `https://resume-chatbot-xxxx.run.app,http://localhost:5173`
+- Do NOT use `*` — it will silently break preflight (Pitfall #10)
+
+**Acceptance:**
+- `curl -i -X OPTIONS https://<ai-service-url>/chat -H "Origin: $FRONTEND_URL" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: content-type"` returns 200 with `Access-Control-Allow-Origin: <FRONTEND_URL>` (NOT `*`)
+
+**[ ] Completed on: ____**
+
+---
+
+### Plan 06-04 Task E: End-to-end smoke test (frontend → ai-service)
+
+**Why deferred:** Requires Tasks A through D done. Covers INT-02 partial (frontend → ai-service integration). Real-traffic verification — cannot be automated in scaffold mode.
+
+**Prerequisites:**
+1. Tasks A, B, C, D all completed
+2. ai-service `/chat` is reachable and answering questions
+3. A quiet 5 minutes to actually use the chatbot
+
+**Steps to complete later:**
+
+1. Open the frontend Cloud Run URL in a browser (Chrome recommended for DevTools clarity)
+2. **Landing page check (CHAT-07):**
+   - Verify `<h1>` shows your real `VITE_CANDIDATE_NAME`
+   - Verify `<h2>` shows your real `VITE_CANDIDATE_TITLE`
+   - Click "Email My Resume" → confirm OS opens default mail client with `Resume inquiry from <name>` subject
+   - Click browser back, then click "Chat With My Resume" → confirm navigation to `/chat`
+3. **Chat screen check (CHAT-02, CHAT-05):**
+   - Auto-greeting bubble appears immediately on page load
+   - Type a real question (e.g. "What languages do you know?") and press Enter
+   - Typing indicator (3 dots) appears
+   - Bot reply appears within ~3 seconds (longer on first cold-start, up to 30s)
+4. **Network tab check (CORS verification):**
+   - Open DevTools → Network tab
+   - Send another message
+   - Find the `OPTIONS /chat` preflight request → should be 200 with `Access-Control-Allow-Origin: <frontend-url>`
+   - Find the `POST /chat` request → should be 200 with the JSON response
+5. **Mobile responsive check (CHAT-03):**
+   - DevTools → Device Toolbar (Ctrl+Shift+M) → iPhone 14 Pro
+   - Reload — verify hero, CTAs stack vertically, header still glass-blur, chat input pinned to bottom, no horizontal scroll
+6. **Hard-refresh deep link check (CHAT-08):**
+   - Navigate to the chat screen
+   - Hit Ctrl+Shift+R (hard refresh) directly on `/chat`
+   - Verify the chat screen still renders (proves nginx SPA fallback `try_files` works)
+
+**Common failure modes (CORS debugging runbook from RESEARCH Track 5):**
+
+| Symptom in browser DevTools | Likely cause | Fix |
+|----------------------------|--------------|-----|
+| `Access to fetch ... blocked by CORS policy: No 'Access-Control-Allow-Origin'` | ai-service not running, or URL mismatch | Verify `VITE_AI_SERVICE_URL` matches deployed ai-service URL exactly |
+| `the value of the 'Access-Control-Allow-Origin' header ... must not be the wildcard '*' when credentials mode is 'include'` | `ALLOWED_ORIGINS=*` on ai-service | Re-do Task D with the exact frontend URL (no `*`) — Pitfall #10 |
+| `Request header field content-type is not allowed by Access-Control-Allow-Headers` | ai-service CORSMiddleware misconfigured | Verify `allow_headers=["*"]` in `ai-service/main.py` line 113-119 (already correct in Phase 4) |
+| `CORS preflight did not succeed` (`net::ERR_FAILED`) | ai-service returning 500 on OPTIONS, or unreachable | `curl -i -X OPTIONS <ai-service-url>/chat -H "Origin: ..." -H "Access-Control-Request-Method: POST"` — should be 200 |
+| Frontend loads but "Sorry, I couldn't reach the AI" | Network failure (cold start timeout, or wrong URL) | Check Cloud Run logs for ai-service; bump `--timeout` on ai-service deploy if cold-start exceeds 30s |
+| 422 Unprocessable Entity from `/chat` | Frontend message shape doesn't match Pydantic | Verify `frontend/src/lib/types.ts` matches `ai-service/main.py` lines 159–196 byte-for-byte |
+
+**[ ] Completed on: ____**

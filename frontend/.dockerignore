@@ -1,0 +1,21 @@
+# Files Vite doesn't need in the build context
+node_modules
+dist
+.git
+.gitignore
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+# Docs / non-build
+*.md
+README*
+LICENSE
+# Editor
+.vscode
+.idea
+# Tests (Phase 7 will add)
+coverage
+*.test.*
+*.spec.*
