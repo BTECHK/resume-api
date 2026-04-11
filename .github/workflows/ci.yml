@@ -1,0 +1,253 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write   # required for Workload Identity Federation (CICD-03)
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+
+jobs:
+  # --------------------------------------------------------------
+  # 1. Path filter — only rebuild what changed (CICD-02)
+  # --------------------------------------------------------------
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      ai_service: ${{ steps.filter.outputs.ai_service }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            ai_service:
+              - 'ai-service/**'
+              - 'scripts/check-anonymization.sh'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci.yml'
+
+  # --------------------------------------------------------------
+  # 2. Lint (CICD-01)
+  # --------------------------------------------------------------
+  lint-ai:
+    name: Lint ai-service (ruff)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.ai_service == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install ruff
+        run: pip install ruff
+      - name: Run ruff
+        working-directory: ai-service
+        run: ruff check .
+
+  lint-frontend:
+    name: Lint frontend (eslint)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run eslint
+        working-directory: frontend
+        run: npm run lint
+
+  # --------------------------------------------------------------
+  # 3. Security scans (CICD-01)
+  # --------------------------------------------------------------
+  security-scan-ai:
+    name: Security scan ai-service (bandit + anonymization)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.ai_service == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Install bandit
+        run: pip install bandit
+      - name: Run bandit (excluding tests)
+        working-directory: ai-service
+        run: bandit -r . -x ./tests,./resume_corpus --skip B101
+      - name: PII deny-list sweep
+        run: bash scripts/check-anonymization.sh
+
+  security-scan-frontend:
+    name: Security scan frontend (npm audit)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: npm audit (high severity only)
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
+
+  # --------------------------------------------------------------
+  # 4. Tests (CICD-01) — enforces the 70% coverage gate (TEST-01)
+  # --------------------------------------------------------------
+  test-ai:
+    name: Test ai-service (pytest + coverage)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.ai_service == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: ai-service/requirements.txt
+      - name: Install dependencies
+        working-directory: ai-service
+        run: pip install -r requirements.txt
+      - name: Run pytest with coverage gate
+        working-directory: ai-service
+        env:
+          GEMINI_API_KEY: "test-key-not-real"
+          ALLOWED_ORIGINS: "*"
+        run: pytest --cov-fail-under=70
+
+  test-frontend:
+    name: Test frontend (vitest)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Run vitest (soft — no tests yet)
+        working-directory: frontend
+        run: npm test --if-present || echo "No frontend tests configured yet"
+
+  # --------------------------------------------------------------
+  # 5. Build + deploy (CICD-04) — push to main only
+  # --------------------------------------------------------------
+  build-and-deploy-ai:
+    name: Build & deploy ai-service
+    runs-on: ubuntu-latest
+    needs: [lint-ai, security-scan-ai, test-ai, changes]
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.ai_service == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authenticate to GCP (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Configure Artifact Registry auth
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+      - name: Build and push ai-service image
+        working-directory: ai-service
+        run: |
+          IMAGE="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/resume-api/ai-service:${{ github.sha }}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ai-service \
+            --image "$IMAGE" \
+            --region us-central1 \
+            --platform managed \
+            --memory 2Gi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 3 \
+            --timeout 60s \
+            --set-env-vars "ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}" \
+            --service-account ${{ secrets.GCP_SERVICE_ACCOUNT }} \
+            --allow-unauthenticated
+      - name: Smoke test deployed service
+        run: |
+          URL=$(gcloud run services describe ai-service --region us-central1 --format='value(status.url)')
+          AI_SERVICE_URL="$URL" python scripts/smoke/smoke_ai_ask.py
+          AI_SERVICE_URL="$URL" python scripts/smoke/smoke_chat.py
+
+  build-and-deploy-frontend:
+    name: Build & deploy frontend
+    runs-on: ubuntu-latest
+    needs: [lint-frontend, security-scan-frontend, test-frontend, changes]
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.changes.outputs.frontend == 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authenticate to GCP (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Configure Artifact Registry auth
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+      - name: Build and push frontend image
+        working-directory: frontend
+        run: |
+          IMAGE="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/resume-api/frontend:${{ github.sha }}"
+          docker build \
+            --build-arg VITE_AI_SERVICE_URL="${{ secrets.VITE_AI_SERVICE_URL }}" \
+            -t "$IMAGE" .
+          docker push "$IMAGE"
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+      - name: Deploy frontend to Cloud Run
+        run: |
+          gcloud run deploy resume-chatbot \
+            --image "$IMAGE" \
+            --region us-central1 \
+            --platform managed \
+            --memory 256Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 3 \
+            --port 8080 \
+            --allow-unauthenticated
