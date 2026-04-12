@@ -60,13 +60,13 @@ def test_injection_does_not_leak_pattern_in_response(test_client):
 
 
 def test_sanitize_response_runs_on_ai_ask(test_client, fake_gemini_client):
-    """Gemini output containing a real-name variation should be scrubbed before return."""
-    fake_gemini_client.models._canned = "The Candidate has 8 years of consulting experience."
+    """Gemini output containing an email should be scrubbed before return."""
+    fake_gemini_client.models._canned = "Contact john.doe@example.com for 8 years of consulting experience."
     response = test_client.post("/ai/ask", json={"question": "What experience?"})
     assert response.status_code == 200
     body = response.json()
-    assert "Candidate" not in body["answer"]
-    assert "candidate" in body["answer"].lower()
+    assert "john.doe@example.com" not in body["answer"]
+    assert "[email redacted]" in body["answer"]
 
 
 def test_sanitize_response_runs_on_chat(test_client, fake_gemini_client):

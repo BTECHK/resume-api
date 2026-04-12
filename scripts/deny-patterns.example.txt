@@ -1,0 +1,6 @@
+# PII deny-list terms for check-anonymization.sh
+# Copy to deny-patterns.txt and add your real PII patterns.
+# One pattern per line (grep -E regex syntax). Lines starting with # are ignored.
+YourFirstName
+YourLastName
+your\.email

@@ -1,14 +1,39 @@
 """Shared fixtures for ai-service test suite."""
 
 import os
+import re
 import tempfile
 from pathlib import Path
 
 import pytest
+import yaml
 
 # Ensure test environment has a dummy API key so modules can import
 os.environ.setdefault("GEMINI_API_KEY", "test-key-not-real")
 os.environ.setdefault("ALLOWED_ORIGINS", "*")
+
+
+_SCRUB_PATTERNS_FILE = Path(__file__).parent.parent / "scrub_patterns.yaml"
+
+
+def _load_pii_names() -> list[tuple[str, str]] | None:
+    if not _SCRUB_PATTERNS_FILE.exists():
+        return None
+    raw = yaml.safe_load(_SCRUB_PATTERNS_FILE.read_text()) or {}
+    names = []
+    for regex_str, replacement in raw.items():
+        literal = re.sub(r"\\[bB]", "", regex_str)
+        literal = re.sub(r"\\s\+", " ", literal)
+        literal = literal.strip()
+        if literal:
+            names.append((literal, replacement))
+    return names
+
+
+@pytest.fixture
+def pii_name_variants():
+    """Real name variants from gitignored scrub_patterns.yaml. None in CI."""
+    return _load_pii_names()
 
 
 @pytest.fixture

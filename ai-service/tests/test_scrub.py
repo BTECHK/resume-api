@@ -4,6 +4,8 @@ Exercises scrub_text() and scrub_filename() in isolation. The CLI entry
 point (main) is excluded from coverage via .coveragerc.
 """
 
+import pytest
+
 
 def test_scrub_module_imports():
     """scrub.py must export the functions used by tests."""
@@ -23,13 +25,15 @@ def test_scrub_replaces_deloitte():
     assert "Big Four" in result
 
 
-def test_scrub_replaces_real_name():
-    """Real name variations should be replaced with 'the candidate'."""
+def test_scrub_replaces_real_name(pii_name_variants):
+    """Name patterns from scrub_patterns.yaml should be applied."""
+    if not pii_name_variants:
+        pytest.skip("scrub_patterns.yaml not present")
     from scrub import scrub_text
-    for variant in ["The Candidate", "The Candidate"]:
-        result = scrub_text(f"{variant} led the team.")
-        assert "Candidate" not in result
-        assert "the candidate" in result
+    for name, replacement in pii_name_variants:
+        result = scrub_text(f"{name} led the team.")
+        assert name not in result
+        assert replacement in result.lower()
 
 
 def test_scrub_replaces_phone():

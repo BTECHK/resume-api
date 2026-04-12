@@ -2,6 +2,8 @@
 
 import time
 
+import pytest
+
 
 def test_security_module_imports():
     """Verify security.py exports all expected functions."""
@@ -104,13 +106,15 @@ def test_is_flagged_expires_after_window(monkeypatch):
     assert test_ip not in _flagged_ips
 
 
-def test_sanitize_response_scrubs_real_name():
-    """Verify response sanitization replaces real name variations."""
+def test_sanitize_response_scrubs_real_name(pii_name_variants):
+    """Verify response sanitization replaces loaded name patterns."""
+    if not pii_name_variants:
+        pytest.skip("scrub_patterns.yaml not present")
     from security import sanitize_response
-    for variant in ["The Candidate", "The Candidate", "Candidate"]:
-        result = sanitize_response(f"{variant} is a consultant")
-        assert "Candidate" not in result
-        assert "candidate" in result.lower()
+    for name, replacement in pii_name_variants:
+        result = sanitize_response(f"{name} is a consultant")
+        assert name not in result
+        assert replacement in result.lower()
 
 
 def test_sanitize_response_scrubs_email():

@@ -116,12 +116,14 @@ def test_interview_patterns_module_exports():
         assert "tags" in item
 
 
-def test_interview_patterns_anonymized():
+def test_interview_patterns_anonymized(pii_name_variants):
     """Tier-2 corpus must be fully anonymized."""
     from loader import get_interview_patterns_as_text
     text = get_interview_patterns_as_text().lower()
-    forbidden = ["the candidate", "candidate", "deloitte", "new resources consulting",
+    forbidden = ["deloitte", "new resources consulting",
                  "wake forest hospital", "bank of wisconsin"]
+    if pii_name_variants:
+        forbidden.extend(name.lower() for name, _ in pii_name_variants)
     for term in forbidden:
         assert term not in text, f"Tier-2 corpus contains forbidden term: {term}"
 
@@ -150,11 +152,13 @@ def test_adr_content_mentions_key_tech():
     assert "slowapi" in text
 
 
-def test_adr_content_anonymized():
+def test_adr_content_anonymized(pii_name_variants):
     """ADR content must not contain real names or employers."""
     from loader import get_adr_content_as_text
     text = get_adr_content_as_text().lower()
-    forbidden = ["the candidate", "candidate", "deloitte"]
+    forbidden = ["deloitte"]
+    if pii_name_variants:
+        forbidden.extend(name.lower() for name, _ in pii_name_variants)
     for term in forbidden:
         assert term not in text, f"ADR content contains forbidden term: {term}"
 

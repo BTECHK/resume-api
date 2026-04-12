@@ -12,7 +12,9 @@ import re
 import time
 import logging
 from collections import defaultdict
+from pathlib import Path
 
+import yaml
 from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
@@ -94,18 +96,21 @@ def is_flagged(ip: str) -> bool:
 # Patterns reimplemented independently — belt-and-suspenders defense
 # ──────────────────────────────────────────────────────────────
 
+_PATTERNS_FILE = Path(__file__).parent / "scrub_patterns.yaml"
+_EXAMPLE_FILE = Path(__file__).parent / "scrub_patterns.example.yaml"
+
+
+def _load_name_scrub_patterns() -> list[tuple[re.Pattern, str]]:
+    f = _PATTERNS_FILE if _PATTERNS_FILE.exists() else _EXAMPLE_FILE
+    raw = yaml.safe_load(f.read_text()) or {}
+    return [(re.compile(p, re.IGNORECASE), r) for p, r in raw.items()]
+
+
 RESPONSE_SCRUB_PATTERNS = [
-    # Real name variations (reimplemented, not imported from scrub.py)
-    (re.compile(r"\bcandidate\s+Candidate\b", re.IGNORECASE), "the candidate"),
-    (re.compile(r"\bKyle\s+Candidate\b", re.IGNORECASE), "the candidate"),
-    (re.compile(r"\bCandidate\b", re.IGNORECASE), "the candidate"),
-    # Email addresses
+    *_load_name_scrub_patterns(),
     (re.compile(r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"), "[email redacted]"),
-    # Phone numbers
     (re.compile(r"\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b"), "[phone redacted]"),
-    # LinkedIn URLs
     (re.compile(r"https?://(?:www\.)?linkedin\.com/in/[a-zA-Z0-9_-]+/?"), "[linkedin redacted]"),
-    # Street addresses (basic)
     (re.compile(r"\b\d+\s+[A-Z][a-z]+\s+(?:St|Ave|Blvd|Dr|Rd|Ln|Way|Ct)\b"), "[address redacted]"),
 ]
 

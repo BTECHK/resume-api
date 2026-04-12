@@ -23,18 +23,27 @@ INCLUDE_FLAGS="--include=*.py --include=*.txt --include=*.md --include=*.json --
 # - tests/** references the deny-list to verify scrubbing works
 EXCLUDE_FLAGS="--exclude-dir=__pycache__ --exclude-dir=resume_corpus --exclude-dir=tests --exclude=scrub.py --exclude=security.py"
 
-# Deny-list: real names, company names, personal contact info
-# Derived from ANONYMIZATION_GUIDE.md
-DENY_PATTERNS=(
-    "the candidate"
-    "Candidate"
-    "the candidate\.candidate"
-    "candidatecandidate"
+# Deny-list: load PII terms from gitignored file, plus hardcoded employer names.
+# The PII names file is gitignored so filter-repo won't rewrite it.
+DENY_PATTERNS_FILE="scripts/deny-patterns.txt"
+
+DENY_PATTERNS=()
+
+if [ -f "$DENY_PATTERNS_FILE" ]; then
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        DENY_PATTERNS+=("$line")
+    done < "$DENY_PATTERNS_FILE"
+else
+    echo "WARNING: $DENY_PATTERNS_FILE not found — skipping PII name checks"
+fi
+
+# Employer names are safe to keep inline (not personal PII)
+DENY_PATTERNS+=(
     "Deloitte"
     "Consulting Firm B"
     "Healthcare Program"
     "Financial Services Program"
-    "linkedin\.com/in/the candidate"
 )
 
 FOUND=0
