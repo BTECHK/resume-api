@@ -18,6 +18,11 @@ concurrency:
 env:
   PYTHON_VERSION: "3.11"
   NODE_VERSION: "20"
+  # GCP deploy config — set these as GitHub Actions repository variables:
+  #   vars.GCP_REGION           (e.g. us-central1)
+  #   vars.AR_REPO              (Artifact Registry repo name, e.g. resume-api)
+  #   vars.AI_SERVICE_NAME      (Cloud Run service, e.g. ai-service)
+  #   vars.FRONTEND_SERVICE_NAME (Cloud Run service, e.g. resume-chatbot)
 
 jobs:
   # --------------------------------------------------------------
@@ -183,19 +188,19 @@ jobs:
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
       - name: Configure Artifact Registry auth
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
       - name: Build and push ai-service image
         working-directory: ai-service
         run: |
-          IMAGE="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/resume-api/ai-service:${{ github.sha }}"
+          IMAGE="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ vars.AR_REPO }}/${{ vars.AI_SERVICE_NAME }}:${{ github.sha }}"
           docker build -t "$IMAGE" .
           docker push "$IMAGE"
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy ai-service \
+          gcloud run deploy ${{ vars.AI_SERVICE_NAME }} \
             --image "$IMAGE" \
-            --region us-central1 \
+            --region ${{ vars.GCP_REGION }} \
             --platform managed \
             --memory 2Gi \
             --cpu 1 \
@@ -207,7 +212,7 @@ jobs:
             --allow-unauthenticated
       - name: Smoke test deployed service
         run: |
-          URL=$(gcloud run services describe ai-service --region us-central1 --format='value(status.url)')
+          URL=$(gcloud run services describe ${{ vars.AI_SERVICE_NAME }} --region ${{ vars.GCP_REGION }} --format='value(status.url)')
           AI_SERVICE_URL="$URL" python scripts/smoke/smoke_ai_ask.py
           AI_SERVICE_URL="$URL" python scripts/smoke/smoke_chat.py
 
@@ -229,25 +234,25 @@ jobs:
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
       - name: Configure Artifact Registry auth
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
       - name: Build and push frontend image
         working-directory: frontend
         run: |
-          IMAGE="us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/resume-api/frontend:${{ github.sha }}"
-          docker build \
-            --build-arg VITE_AI_SERVICE_URL="${{ secrets.VITE_AI_SERVICE_URL }}" \
-            -t "$IMAGE" .
+          IMAGE="${{ vars.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ vars.AR_REPO }}/frontend:${{ github.sha }}"
+          docker build -t "$IMAGE" .
           docker push "$IMAGE"
           echo "IMAGE=$IMAGE" >> $GITHUB_ENV
       - name: Deploy frontend to Cloud Run
         run: |
-          gcloud run deploy resume-chatbot \
+          AI_URL=$(gcloud run services describe ${{ vars.AI_SERVICE_NAME }} --region ${{ vars.GCP_REGION }} --format='value(status.url)')
+          gcloud run deploy ${{ vars.FRONTEND_SERVICE_NAME }} \
             --image "$IMAGE" \
-            --region us-central1 \
+            --region ${{ vars.GCP_REGION }} \
             --platform managed \
             --memory 256Mi \
             --cpu 1 \
             --min-instances 0 \
             --max-instances 3 \
             --port 8080 \
+            --set-env-vars "AI_SERVICE_URL=$AI_URL,CANDIDATE_NAME=${{ vars.CANDIDATE_NAME }},CANDIDATE_TITLE=${{ vars.CANDIDATE_TITLE }},CANDIDATE_EMAIL=${{ vars.CANDIDATE_EMAIL }}" \
             --allow-unauthenticated

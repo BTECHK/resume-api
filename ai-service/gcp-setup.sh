@@ -19,11 +19,11 @@
 set -euo pipefail
 
 # ── Configuration ──────────────────────────────────────────────
-# Update these values for your project
+# Override any of these via env vars before running the script.
 PROJECT_ID="${GCP_PROJECT_ID:?Set GCP_PROJECT_ID env var}"
-REGION="us-central1"
-AR_REPO="resume-api"
-SERVICE_ACCOUNT="resume-ai-service"
+: "${REGION:=us-central1}"
+: "${AR_REPO:=resume-api}"
+: "${SERVICE_ACCOUNT:=resume-ai-service}"
 
 echo "Project: $PROJECT_ID"
 echo "Region: $REGION"
