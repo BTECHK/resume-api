@@ -97,7 +97,7 @@ RESUME_DATA = {
     },
     "experience": [
         {
-          "company": "Consulting Firm A",
+          "company": "A Big Four Professional Services Firm",
           "title": "Consultant → Senior Consultant",
           "dates": "May 2018 – July 2025",
           "projects": [
@@ -126,7 +126,7 @@ RESUME_DATA = {
               ]
             },
             {
-              "name": "Federal Defense Program",
+              "name": "Federal Defense Program (Defense Intelligence Agency)",
               "subtitle": "Strategic Solutions for HR IT Procurement",
               "bullets": [
                 "Designed strategic planning framework: Conducting 100+ stakeholder interviews across 15 departments to assess process drivers, identify gaps, and align IT procurement with DoD PPBE cycle—preventing future funding forfeitures",
@@ -137,12 +137,12 @@ RESUME_DATA = {
           ]
         },
         {
-          "company": "Consulting Firm B",
+          "company": "A Mid-Size Technology Consulting Firm",
           "title": "Jr. Developer → Developer",
           "dates": "October 2016 – April 2018",
           "projects": [
             {
-              "name": "Healthcare Program (Healthcare Program)",
+              "name": "Healthcare Program (Regional Academic Medical Center)",
               "subtitle": "Oracle HCM Cloud Implementation Solutions",
               "bullets": [
                 "Led requirements gathering and business analysis: Managing key stakeholders through fit/gap analysis and discovery sessions to convert 150+ PeopleSoft/SQR reports to Oracle Cloud, analyzing 20+ PeopleSoft app engines and SQR interfaces for system integration compatibility",
@@ -151,7 +151,7 @@ RESUME_DATA = {
               ]
             },
             {
-              "name": "Financial Services (Financial Services Program)",
+              "name": "Financial Services (Multi-State Community Banking Group)",
               "subtitle": "Oracle HCM Analytics Solutions",
               "bullets": [
                 "Developed successful prototype securing contract extension: Creating proof-of-concept report using SQL and Oracle BI tools to integrate HCM data with external Excel sources, demonstrating 40% efficiency improvement in workforce analytics capabilities and securing $50K follow-on contract",
