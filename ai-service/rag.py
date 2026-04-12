@@ -10,9 +10,7 @@ from typing import Optional
 import chromadb
 from sentence_transformers import SentenceTransformer
 
-from resume_data import get_resume_as_text
-from interview_qa import get_interview_patterns_as_text
-from adr_content import get_adr_content_as_text
+from loader import get_resume_as_text, get_interview_patterns_as_text, get_adr_content_as_text
 
 logger = logging.getLogger(__name__)
 
