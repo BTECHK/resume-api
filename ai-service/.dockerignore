@@ -7,3 +7,8 @@ __pycache__/
 *.key
 *.pem
 .git
+# Test files — not needed in production
+tests/
+requirements-dev.txt
+pytest.ini
+.pytest_cache/

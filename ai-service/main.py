@@ -16,6 +16,7 @@ Security:
 """
 
 import os
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from typing import Literal
@@ -58,6 +59,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 # Gemini client — initialized lazily in lifespan, stored here
 _genai_client = None
+_startup_ready = False  # True once RAG + Gemini are initialized
 
 
 def get_genai_client():
@@ -75,22 +77,32 @@ def get_genai_client():
 # Lifespan (startup/shutdown)
 # ──────────────────────────────────────────────────────────────
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Startup: load secrets, initialize RAG, warm Gemini client."""
-    logger.info("Starting AI service...")
+async def _warm_up():
+    """Background task: load Gemini client + RAG so the first request is fast.
 
-    # 1. Initialize Gemini client (loads API key from env or Secret Manager)
-    get_genai_client()
+    Runs AFTER uvicorn is already listening, so Cloud Run's startup probe
+    sees the port open immediately and doesn't kill the container.
+    """
+    global _startup_ready
+    loop = asyncio.get_running_loop()
 
-    # 2. Initialize RAG (ingest resume data into Chroma)
+    # Heavy I/O + CPU work — run in thread so we don't block the event loop
+    await loop.run_in_executor(None, get_genai_client)
+    await loop.run_in_executor(None, get_rag)
+
     rag = get_rag()
     chunk_count = rag.collection.count()
     logger.info("RAG ready with %d chunks", chunk_count)
+    _startup_ready = True
+    logger.info("AI service fully warmed up")
 
-    logger.info("AI service ready on port 8090")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup: kick off background warm-up, yield immediately so port opens."""
+    logger.info("Starting AI service on port %s ...", os.environ.get("PORT", "8080"))
+    asyncio.create_task(_warm_up())
     yield
-    # Shutdown — nothing to clean up (in-memory Chroma)
     logger.info("AI service shutting down")
 
 
@@ -239,7 +251,9 @@ def _check_and_handle_injection(text: str, request: Request) -> JSONResponse | N
 
 @app.get("/health")
 def health():
-    """Health check — used by Dockerfile HEALTHCHECK and Cloud Run."""
+    """Health check — Cloud Run startup/liveness probe."""
+    if not _startup_ready:
+        return {"status": "warming_up"}
     rag = get_rag()
     return {
         "status": "ok",
@@ -259,6 +273,9 @@ async def ask(request: Request, body: AskRequest):
     4. Sanitize response (SEC-09)
     5. Return answer with source references (D-01)
     """
+    if not _startup_ready:
+        return safe_error_response(503, "Service is warming up, try again shortly")
+
     # Injection check — per D-03, return 429 with deflection
     injection_response = _check_and_handle_injection(body.question, request)
     if injection_response:
@@ -332,6 +349,9 @@ async def chat(request: Request, body: ChatRequest):
     Reconstructs chat from history on every request (stateless).
     Last 3 messages sent verbatim; older messages summarized (D-07).
     """
+    if not _startup_ready:
+        return safe_error_response(503, "Service is warming up, try again shortly")
+
     # Injection check on the latest user message
     last_message = body.messages[-1].content
     injection_response = _check_and_handle_injection(last_message, request)
