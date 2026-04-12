@@ -1,0 +1,5 @@
+# Name-specific PII patterns loaded by scrub.py at import time.
+# Copy this file to scrub_patterns.yaml and add your real name variants.
+# Regexes use Python `re` syntax. Values are the replacement string.
+"\\bYour\\s+Full\\s+Name\\b": "the candidate"
+"\\bYourLastName\\b": "the candidate"

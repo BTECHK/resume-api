@@ -17,6 +17,8 @@ import os
 import re
 from pathlib import Path
 
+import yaml
+
 # Directories
 RAW_DIR = Path(__file__).parent / "resume_corpus" / "raw"
 SANITIZED_DIR = Path(__file__).parent / "resume_corpus" / "sanitized" / "mock_interviews"
@@ -72,26 +74,28 @@ COMPANY_REPLACEMENTS = {
 }
 
 # ──────────────────────────────────────────────────────────────
-# PII patterns
+# PII patterns — name-specific regexes loaded from gitignored YAML
 # ──────────────────────────────────────────────────────────────
-PII_REPLACEMENTS = {
-    # Real name variations
-    r"\bKyle\s+Candidate\b": "the candidate",
-    r"\bcandidate\s+Candidate\b": "the candidate",
-    r"\bCandidate\b": "the candidate",
-    # Phone numbers
+_PATTERNS_FILE = Path(__file__).parent / "scrub_patterns.yaml"
+_EXAMPLE_FILE = Path(__file__).parent / "scrub_patterns.example.yaml"
+
+
+def _load_name_patterns() -> dict[str, str]:
+    f = _PATTERNS_FILE if _PATTERNS_FILE.exists() else _EXAMPLE_FILE
+    return yaml.safe_load(f.read_text()) or {}
+
+
+_GENERIC_PII_PATTERNS = {
     r"\b\d{3}[-.\s]?\d{3}[-.\s]?\d{4}\b": "[PHONE REDACTED]",
-    # Email addresses (generic pattern)
     r"\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b": "[EMAIL REDACTED]",
-    # LinkedIn URLs
     r"https?://(?:www\.)?linkedin\.com/in/[a-zA-Z0-9_-]+/?": "[LINKEDIN REDACTED]",
-    # Street addresses (basic pattern)
     r"\b\d+\s+[A-Z][a-z]+\s+(?:St|Ave|Blvd|Dr|Rd|Ln|Way|Ct)\b": "[ADDRESS REDACTED]",
-    # Clearance levels
     r"\bTop Secret/?SCI\b": "[CLEARANCE LEVEL]",
     r"\bTS/?SCI\b": "[CLEARANCE LEVEL]",
     r"\bSecret\s+clearance\b": "[CLEARANCE LEVEL]",
 }
+
+PII_REPLACEMENTS = {**_GENERIC_PII_PATTERNS, **_load_name_patterns()}
 
 # ──────────────────────────────────────────────────────────────
 # Interviewer names — common first names from transcripts

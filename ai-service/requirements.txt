@@ -13,6 +13,7 @@ slowapi>=0.1.9
 
 # Utilities
 python-dotenv>=1.0.0
+pyyaml>=6.0
 
 # GCP
 google-cloud-secret-manager>=2.20.0
