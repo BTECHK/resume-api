@@ -1,8 +1,8 @@
 """Anonymization verification tests — TEST-01 explicit requirement.
 
-Scans runtime Python modules (prompts.py, resume_data.py, interview_qa.py,
-adr_content.py) for any PII deny-list terms. This is the runtime mirror of
-scripts/check-anonymization.sh that runs in the pytest suite.
+Scans runtime Python modules and YAML data files for any PII deny-list
+terms. This is the runtime mirror of scripts/check-anonymization.sh that
+runs in the pytest suite.
 """
 
 from pathlib import Path
@@ -13,12 +13,13 @@ AI_SERVICE_ROOT = Path(__file__).parent.parent
 
 RUNTIME_MODULES = [
     "prompts.py",
-    "resume_data.py",
-    "interview_qa.py",
-    "adr_content.py",
+    "loader.py",
     "unanswered.py",
     "rag.py",
     "main.py",
+    "data/resume.yaml",
+    "data/interview_qa.yaml",
+    "data/adr.yaml",
 ]
 
 DENY_PATTERNS = [
@@ -81,7 +82,7 @@ def test_prompts_refer_to_the_candidate_not_real_name():
 
 def test_resume_data_get_text_non_empty():
     """resume_data.get_resume_as_text() should return a non-trivial string."""
-    from resume_data import get_resume_as_text
+    from loader import get_resume_as_text
     text = get_resume_as_text()
     assert isinstance(text, str)
     assert len(text) > 500
@@ -89,18 +90,18 @@ def test_resume_data_get_text_non_empty():
 
 def test_resume_data_anonymized():
     """get_resume_as_text() output must be anonymized."""
-    from resume_data import get_resume_as_text
+    from loader import get_resume_as_text
     text = get_resume_as_text().lower()
     for term in [t.lower() for t in DENY_PATTERNS]:
         assert term not in text, f"resume_data output contains: {term}"
 
 
 def test_resume_data_sections_structure():
-    """RESUME_SECTIONS should have expected top-level keys."""
-    from resume_data import RESUME_SECTIONS
+    """Resume dict should have expected top-level keys."""
+    from loader import get_resume_dict
+    data = get_resume_dict()
     for key in ("contact", "summary", "skills"):
-        assert key in RESUME_SECTIONS
-    contact = RESUME_SECTIONS["contact"]
+        assert key in data
+    contact = data["contact"]
     assert "name" in contact
-    # Name must be the anonymized placeholder, not a real person
     assert contact["name"] == "The Candidate"

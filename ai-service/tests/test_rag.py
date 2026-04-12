@@ -104,13 +104,13 @@ def test_needs_architecture_tier_negative():
 
 def test_interview_patterns_module_exports():
     """interview_qa.py must expose the tier-2 corpus."""
-    from interview_qa import INTERVIEW_PATTERNS, get_interview_patterns_as_text
-    assert isinstance(INTERVIEW_PATTERNS, list)
-    assert len(INTERVIEW_PATTERNS) >= 10
+    from loader import _load_yaml, get_interview_patterns_as_text
+    patterns = _load_yaml("interview_qa")
+    assert isinstance(patterns, list)
+    assert len(patterns) >= 10
     text = get_interview_patterns_as_text()
     assert "INTERVIEW PATTERN" in text
-    # Each item has required keys
-    for item in INTERVIEW_PATTERNS:
+    for item in patterns:
         assert "question" in item
         assert "response_pattern" in item
         assert "tags" in item
@@ -118,7 +118,7 @@ def test_interview_patterns_module_exports():
 
 def test_interview_patterns_anonymized():
     """Tier-2 corpus must be fully anonymized."""
-    from interview_qa import get_interview_patterns_as_text
+    from loader import get_interview_patterns_as_text
     text = get_interview_patterns_as_text().lower()
     forbidden = ["the candidate", "candidate", "deloitte", "new resources consulting",
                  "wake forest hospital", "bank of wisconsin"]
@@ -128,19 +128,20 @@ def test_interview_patterns_anonymized():
 
 def test_adr_content_module_exports():
     """adr_content.py must expose architecture facts."""
-    from adr_content import ADR_CONTENT, get_adr_content_as_text
-    assert isinstance(ADR_CONTENT, list)
-    assert len(ADR_CONTENT) >= 10
+    from loader import _load_yaml, get_adr_content_as_text
+    adr_data = _load_yaml("adr")
+    assert isinstance(adr_data, list)
+    assert len(adr_data) >= 10
     text = get_adr_content_as_text()
     assert "ARCHITECTURE DECISION" in text
-    for item in ADR_CONTENT:
+    for item in adr_data:
         assert "decision" in item
         assert "content" in item
 
 
 def test_adr_content_mentions_key_tech():
     """Architecture content should reference the key stack components."""
-    from adr_content import get_adr_content_as_text
+    from loader import get_adr_content_as_text
     text = get_adr_content_as_text().lower()
     assert "gemini" in text
     assert "chroma" in text
@@ -151,7 +152,7 @@ def test_adr_content_mentions_key_tech():
 
 def test_adr_content_anonymized():
     """ADR content must not contain real names or employers."""
-    from adr_content import get_adr_content_as_text
+    from loader import get_adr_content_as_text
     text = get_adr_content_as_text().lower()
     forbidden = ["the candidate", "candidate", "deloitte"]
     for term in forbidden:
