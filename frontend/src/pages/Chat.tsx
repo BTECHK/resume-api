@@ -1,26 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Header } from "../components/Header";
 import { MessageBubble } from "../components/MessageBubble";
 import { TypingIndicator } from "../components/TypingIndicator";
 import { ChatInput } from "../components/ChatInput";
 import { sendChat, ChatApiError } from "../lib/api";
+import { useConfig } from "../lib/config";
 import type { ChatMessage } from "../lib/types";
-
-const CANDIDATE_NAME = import.meta.env.VITE_CANDIDATE_NAME || "Candidate";
-const CANDIDATE_TITLE =
-  import.meta.env.VITE_CANDIDATE_TITLE || "Software Engineer";
-
-// Compute initials from candidate name (e.g. "Jane Doe" → "JD")
-const initials = CANDIDATE_NAME.split(" ")
-  .filter(Boolean)
-  .map((word) => word[0]!.toUpperCase())
-  .slice(0, 2)
-  .join("");
-
-const greeting: ChatMessage = {
-  role: "assistant",
-  content: `Hi — I'm a bot trained on ${CANDIDATE_NAME}'s resume. Ask me anything about their background, skills, or experience.`,
-};
 
 const ERROR_REPLY: ChatMessage = {
   role: "assistant",
@@ -29,7 +14,34 @@ const ERROR_REPLY: ChatMessage = {
 };
 
 export function Chat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([greeting]);
+  const { candidateName, candidateTitle } = useConfig();
+
+  const initials = useMemo(
+    () =>
+      candidateName
+        .split(" ")
+        .filter(Boolean)
+        .map((word) => word[0]!.toUpperCase())
+        .slice(0, 2)
+        .join(""),
+    [candidateName]
+  );
+
+  const greeting: ChatMessage = useMemo(
+    () => ({
+      role: "assistant",
+      content: `Hi — I'm a bot trained on ${candidateName}'s resume. Ask me anything about their background, skills, or experience.`,
+    }),
+    [candidateName]
+  );
+  const [messages, setMessages] = useState<ChatMessage[]>(() => [greeting]);
+  const greetingSet = useRef(false);
+  useEffect(() => {
+    if (!greetingSet.current) {
+      greetingSet.current = true;
+      setMessages([greeting]);
+    }
+  }, [greeting]);
   const [isLoading, setIsLoading] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -89,7 +101,7 @@ export function Chat() {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-[var(--color-canvas)] dark:bg-[var(--color-canvas-dark)]">
-      <Header initials={initials || "?"} title={CANDIDATE_TITLE} />
+      <Header initials={initials || "?"} title={candidateTitle} />
 
       <div ref={listRef} className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-3xl flex flex-col gap-3 px-4 py-6 sm:px-6">

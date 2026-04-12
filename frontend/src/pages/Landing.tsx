@@ -1,25 +1,26 @@
+import { useMemo } from "react";
 import { Link } from "react-router";
-
-const CANDIDATE_NAME = import.meta.env.VITE_CANDIDATE_NAME || "Candidate";
-const CANDIDATE_TITLE =
-  import.meta.env.VITE_CANDIDATE_TITLE || "Software Engineer";
-const CANDIDATE_EMAIL =
-  import.meta.env.VITE_CANDIDATE_EMAIL || "hello@example.com";
-
-const MAILTO_HREF = `mailto:${CANDIDATE_EMAIL}?subject=${encodeURIComponent(
-  `Resume inquiry from ${CANDIDATE_NAME}`
-)}`;
+import { useConfig } from "../lib/config";
 
 export function Landing() {
+  const { candidateName, candidateTitle, candidateEmail } = useConfig();
+
+  const mailtoHref = useMemo(
+    () =>
+      `mailto:${candidateEmail}?subject=${encodeURIComponent(
+        `Resume inquiry from ${candidateName}`
+      )}`,
+    [candidateEmail, candidateName]
+  );
   return (
     <main className="min-h-[100dvh] flex items-center justify-center px-6 py-12">
       <div className="mx-auto max-w-2xl w-full text-center">
         {/* Hero */}
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-semibold tracking-tight text-[var(--color-ink)] dark:text-white">
-          {CANDIDATE_NAME}
+          {candidateName}
         </h1>
         <h2 className="mt-3 text-xl sm:text-2xl text-[var(--color-ink-muted)] font-normal">
-          {CANDIDATE_TITLE}
+          {candidateTitle}
         </h2>
 
         <p className="mt-6 text-base sm:text-lg text-[var(--color-ink-muted)] max-w-xl mx-auto">
@@ -60,7 +61,7 @@ export function Landing() {
           </Link>
 
           <a
-            href={MAILTO_HREF}
+            href={mailtoHref}
             className="
               inline-flex items-center justify-center
               rounded-full

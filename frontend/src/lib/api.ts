@@ -1,6 +1,5 @@
 import type { ChatMessage, ChatRequest, ChatResponse } from "./types";
-
-const AI_URL = import.meta.env.VITE_AI_SERVICE_URL;
+import { getConfig } from "./config";
 
 export class ChatApiError extends Error {
   status?: number;
@@ -49,9 +48,10 @@ export async function sendChat(
     }
   }
 
-  if (!AI_URL) {
+  const { aiServiceUrl } = await getConfig();
+  if (!aiServiceUrl) {
     throw new ChatApiError(
-      "VITE_AI_SERVICE_URL is not configured. Set it in .env.local before building."
+      "AI service URL is not configured. Set AI_SERVICE_URL env var on the container."
     );
   }
 
@@ -59,7 +59,7 @@ export async function sendChat(
 
   let response: Response;
   try {
-    response = await fetch(`${AI_URL}/chat`, {
+    response = await fetch(`${aiServiceUrl}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

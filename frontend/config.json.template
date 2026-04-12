@@ -1,0 +1,6 @@
+{
+  "aiServiceUrl": "${AI_SERVICE_URL}",
+  "candidateName": "${CANDIDATE_NAME}",
+  "candidateTitle": "${CANDIDATE_TITLE}",
+  "candidateEmail": "${CANDIDATE_EMAIL}"
+}

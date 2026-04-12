@@ -36,24 +36,14 @@ RUN npm ci
 # Copy source and build
 COPY . .
 
-# Build-time env vars are read from the build environment;
-# Cloud Build / local docker build must pass them via --build-arg
-ARG VITE_AI_SERVICE_URL
-ARG VITE_CANDIDATE_NAME
-ARG VITE_CANDIDATE_TITLE
-ARG VITE_CANDIDATE_EMAIL
-ENV VITE_AI_SERVICE_URL=${VITE_AI_SERVICE_URL}
-ENV VITE_CANDIDATE_NAME=${VITE_CANDIDATE_NAME}
-ENV VITE_CANDIDATE_TITLE=${VITE_CANDIDATE_TITLE}
-ENV VITE_CANDIDATE_EMAIL=${VITE_CANDIDATE_EMAIL}
-
 RUN npm run build
 
 # -- Stage 2: serve ---------------------------------------------
 FROM nginx:1.27-alpine AS runtime
 
-# Copy our nginx.conf over the default
+# Copy our nginx.conf and config template
 COPY nginx.conf /etc/nginx/nginx.conf
+COPY config.json.template /etc/nginx/config.json.template
 
 # Copy the built static files
 COPY --from=build /app/dist /usr/share/nginx/html
@@ -71,4 +61,5 @@ USER nginx
 EXPOSE 8080
 STOPSIGNAL SIGQUIT
 
-CMD ["nginx", "-g", "daemon off;"]
+# At startup: envsubst renders config.json from env vars, then nginx starts
+CMD ["/bin/sh", "-c", "envsubst < /etc/nginx/config.json.template > /usr/share/nginx/html/config.json && nginx -g 'daemon off;'"]
