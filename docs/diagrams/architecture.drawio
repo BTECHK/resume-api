@@ -1,0 +1,59 @@
+<mxfile host="app.diagrams.net" modified="2026-04-12T00:00:00.000Z" agent="text-authored" version="24.0.0">
+  <diagram name="architecture" id="arch-main">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="browser" value="User Browser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="40" y="360" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="github" value="GitHub (source)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="actions" value="GitHub Actions (CI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="240" y="40" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ar" value="Artifact Registry (images)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="440" y="40" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="frontend" value="Cloud Run: frontend (chatbot UI)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="240" y="260" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="api" value="Cloud Run: resume-api" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="240" y="360" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ai" value="Cloud Run: ai-service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="240" y="460" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sqlite" value="SQLite (embedded in resume-api)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="500" y="360" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="bq" value="BigQuery" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="760" y="360" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="chroma" value="Chroma (in-memory, ai-service)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="500" y="460" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="sm" value="Secret Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="760" y="460" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="gemini" value="Gemini API" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="760" y="560" width="160" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="push" style="endArrow=classic;html=1;" edge="1" parent="1" source="github" target="actions"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" value="pushes image" style="endArrow=classic;html=1;" edge="1" parent="1" source="actions" target="ar"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" value="deploys" style="endArrow=classic;html=1;" edge="1" parent="1" source="ar" target="frontend"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" value="deploys" style="endArrow=classic;html=1;" edge="1" parent="1" source="ar" target="api"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" value="deploys" style="endArrow=classic;html=1;" edge="1" parent="1" source="ar" target="ai"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" value="HTTPS" style="endArrow=classic;html=1;" edge="1" parent="1" source="browser" target="frontend"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e7" value="HTTPS/REST" style="endArrow=classic;html=1;" edge="1" parent="1" source="browser" target="api"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e8" value="HTTPS/REST" style="endArrow=classic;html=1;" edge="1" parent="1" source="frontend" target="ai"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e9" value="reads/writes" style="endArrow=classic;html=1;" edge="1" parent="1" source="api" target="sqlite"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e10" value="ETL" style="endArrow=classic;html=1;" edge="1" parent="1" source="sqlite" target="bq"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e11" value="vector search" style="endArrow=classic;html=1;" edge="1" parent="1" source="ai" target="chroma"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e12" value="secrets" style="endArrow=classic;html=1;" edge="1" parent="1" source="sm" target="ai"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e13" value="HTTPS" style="endArrow=classic;html=1;" edge="1" parent="1" source="ai" target="gemini"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

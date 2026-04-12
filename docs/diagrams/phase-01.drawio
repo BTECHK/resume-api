@@ -1,0 +1,24 @@
+<mxfile host="app.diagrams.net" modified="2026-04-12T00:00:00.000Z" agent="text-authored" version="24.0.0">
+  <diagram name="phase-01" id="phase-01">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="browser" value="Browser" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="40" y="200" width="160" height="60" as="geometry" /></mxCell>
+        <mxCell id="api" value="Cloud Run: resume-api" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="260" y="200" width="180" height="60" as="geometry" /></mxCell>
+        <mxCell id="sqlite" value="SQLite (ops DB)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="500" y="120" width="160" height="60" as="geometry" /></mxCell>
+        <mxCell id="bq" value="BigQuery (warehouse)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1"><mxGeometry x="500" y="280" width="180" height="60" as="geometry" /></mxCell>
+        <mxCell id="t1" value="Tier 1: Raw SQL" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="740" y="120" width="160" height="60" as="geometry" /></mxCell>
+        <mxCell id="t2" value="Tier 2: Indexed" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="740" y="200" width="160" height="60" as="geometry" /></mxCell>
+        <mxCell id="t3" value="Tier 3: Materialized/Opt" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="740" y="280" width="180" height="60" as="geometry" /></mxCell>
+        <mxCell id="note" value="3 SQL tiers: progressive optimization" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#000000;dashed=1;" vertex="1" parent="1"><mxGeometry x="740" y="380" width="200" height="40" as="geometry" /></mxCell>
+        <mxCell id="e1" value="HTTPS/REST" style="endArrow=classic;html=1;" edge="1" parent="1" source="browser" target="api"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" value="reads/writes" style="endArrow=classic;html=1;" edge="1" parent="1" source="api" target="sqlite"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" value="analytics" style="endArrow=classic;html=1;" edge="1" parent="1" source="api" target="bq"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" value="query" style="endArrow=classic;html=1;" edge="1" parent="1" source="bq" target="t1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" value="query" style="endArrow=classic;html=1;" edge="1" parent="1" source="bq" target="t2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e6" value="query" style="endArrow=classic;html=1;" edge="1" parent="1" source="bq" target="t3"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

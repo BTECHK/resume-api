@@ -1,0 +1,20 @@
+<mxfile host="app.diagrams.net" modified="2026-04-12T00:00:00.000Z" agent="text-authored" version="24.0.0">
+  <diagram name="phase-05" id="phase-05">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="826" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="gmail" value="Gmail Inbox" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="40" y="200" width="160" height="60" as="geometry" /></mxCell>
+        <mxCell id="n8n" value="n8n workflow&#10;(e2-micro VM, OAuth)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="240" y="200" width="200" height="60" as="geometry" /></mxCell>
+        <mxCell id="ai" value="ai-service /chat" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1"><mxGeometry x="480" y="200" width="160" height="60" as="geometry" /></mxCell>
+        <mxCell id="reply" value="Gmail Reply" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1"><mxGeometry x="680" y="200" width="160" height="60" as="geometry" /></mxCell>
+        <mxCell id="fallback" value="Fallback reply (template)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1"><mxGeometry x="480" y="320" width="200" height="60" as="geometry" /></mxCell>
+        <mxCell id="e1" value="new email" style="endArrow=classic;html=1;" edge="1" parent="1" source="gmail" target="n8n"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e2" value="POST /chat" style="endArrow=classic;html=1;" edge="1" parent="1" source="n8n" target="ai"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e3" value="send" style="endArrow=classic;html=1;" edge="1" parent="1" source="ai" target="reply"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e4" value="if ai down" style="endArrow=classic;html=1;dashed=1;" edge="1" parent="1" source="n8n" target="fallback"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="e5" value="send" style="endArrow=classic;html=1;dashed=1;" edge="1" parent="1" source="fallback" target="reply"><mxGeometry relative="1" as="geometry" /></mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
