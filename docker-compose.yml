@@ -4,10 +4,8 @@ services:
   api:
     # Configuration for building the Docker image for the API service.
     build:
-      # The build context is the 'api' directory.
-      context: ./api
-      # The Dockerfile to use for building the image.
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: api/Dockerfile
     # Maps port 8080 on the host to port 8080 in the container.
     ports:
       - "8080:8080"

@@ -7,9 +7,9 @@ RUN python -m venv /opt/venv
 #Ensure the venv's bin is first in PATH so pip/python resolve there
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy only requirements first (Docker caches this layer-
-# Dependancies only reinstall if requirements.txt changes)
-COPY requirements.txt .
+# Copy only requirements first (Docker caches this layer —
+# dependencies only reinstall if requirements.txt changes)
+COPY api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ---- Stage 2: Runtime ----
@@ -27,8 +27,10 @@ RUN apt-get update && \
 # Set the working directory inside the container 
 WORKDIR /app
 
-# Copy the application code from the api/ directory
-COPY . . 
+# Copy the API application code and shared YAML data + loader
+COPY api/ ./
+COPY ai-service/loader.py ./ai_service/
+COPY ai-service/data/ ./ai_service/data/
 
 # Create a non root user for security - if someone exploits the app, they can't modify the system files 
 RUN useradd -m appuser && chown -R appuser:appuser /app
