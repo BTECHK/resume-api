@@ -101,7 +101,10 @@ class ResumeRAG:
     def embedder(self) -> SentenceTransformer:
         if self._embedder is None:
             logger.info("Loading embedding model: %s", EMBEDDING_MODEL)
-            self._embedder = SentenceTransformer(EMBEDDING_MODEL)
+            # local_files_only prevents ANY HF Hub metadata calls at load time —
+            # critical on Cloud Run where HF rate-limits shared egress IPs and
+            # HEAD calls were stalling warm-up indefinitely.
+            self._embedder = SentenceTransformer(EMBEDDING_MODEL, local_files_only=True)
         return self._embedder
 
     @property
