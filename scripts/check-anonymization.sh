@@ -38,13 +38,14 @@ else
     echo "WARNING: $DENY_PATTERNS_FILE not found — skipping PII name checks"
 fi
 
-# Employer names are safe to keep inline (not personal PII)
-DENY_PATTERNS+=(
-    "Deloitte"
-    "Consulting Firm B"
-    "Healthcare Program"
-    "Financial Services Program"
-)
+# Employer names loaded from gitignored file
+EMPLOYER_DENY_FILE="ai-service/tests/employer_deny.txt"
+if [ -f "$EMPLOYER_DENY_FILE" ]; then
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        DENY_PATTERNS+=("$line")
+    done < "$EMPLOYER_DENY_FILE"
+fi
 
 FOUND=0
 

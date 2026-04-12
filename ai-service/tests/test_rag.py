@@ -118,12 +118,14 @@ def test_interview_patterns_module_exports():
 
 def test_interview_patterns_anonymized(pii_name_variants):
     """Tier-2 corpus must be fully anonymized."""
+    from conftest import _load_employer_deny
     from loader import get_interview_patterns_as_text
     text = get_interview_patterns_as_text().lower()
-    forbidden = ["deloitte", "new resources consulting",
-                 "wake forest hospital", "bank of wisconsin"]
+    forbidden = [t.lower() for t in _load_employer_deny()]
     if pii_name_variants:
         forbidden.extend(name.lower() for name, _ in pii_name_variants)
+    if not forbidden:
+        pytest.skip("No deny terms available")
     for term in forbidden:
         assert term not in text, f"Tier-2 corpus contains forbidden term: {term}"
 
@@ -154,11 +156,14 @@ def test_adr_content_mentions_key_tech():
 
 def test_adr_content_anonymized(pii_name_variants):
     """ADR content must not contain real names or employers."""
+    from conftest import _load_employer_deny
     from loader import get_adr_content_as_text
     text = get_adr_content_as_text().lower()
-    forbidden = ["deloitte"]
+    forbidden = [t.lower() for t in _load_employer_deny()]
     if pii_name_variants:
         forbidden.extend(name.lower() for name, _ in pii_name_variants)
+    if not forbidden:
+        pytest.skip("No deny terms available")
     for term in forbidden:
         assert term not in text, f"ADR content contains forbidden term: {term}"
 

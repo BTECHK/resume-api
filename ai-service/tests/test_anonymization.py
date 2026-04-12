@@ -26,12 +26,15 @@ RUNTIME_MODULES = [
 
 _SCRUB_PATTERNS_FILE = AI_SERVICE_ROOT / "scrub_patterns.yaml"
 
-EMPLOYER_DENY = [
-    "Deloitte",
-    "Consulting Firm B",
-    "Healthcare Program",
-    "Financial Services Program",
-]
+_EMPLOYER_DENY_FILE = AI_SERVICE_ROOT / "tests" / "employer_deny.txt"
+
+EMPLOYER_DENY = []
+if _EMPLOYER_DENY_FILE.exists():
+    EMPLOYER_DENY = [
+        line.strip()
+        for line in _EMPLOYER_DENY_FILE.read_text().splitlines()
+        if line.strip() and not line.startswith("#")
+    ]
 
 
 def _load_deny_names() -> list[str]:
@@ -66,6 +69,8 @@ def test_runtime_module_free_of_pii(module_name):
 @pytest.mark.parametrize("module_name", RUNTIME_MODULES)
 def test_runtime_module_free_of_employer_names(module_name):
     """Runtime modules must not name real employers or clients."""
+    if not EMPLOYER_DENY:
+        pytest.skip("employer_deny.txt not present")
     module_path = AI_SERVICE_ROOT / module_name
     content = module_path.read_text(encoding="utf-8", errors="replace")
     for term in EMPLOYER_DENY:

@@ -14,6 +14,17 @@ os.environ.setdefault("ALLOWED_ORIGINS", "*")
 
 
 _SCRUB_PATTERNS_FILE = Path(__file__).parent.parent / "scrub_patterns.yaml"
+_EMPLOYER_DENY_FILE = Path(__file__).parent / "employer_deny.txt"
+
+
+def _load_employer_deny() -> list[str]:
+    if not _EMPLOYER_DENY_FILE.exists():
+        return []
+    return [
+        line.strip()
+        for line in _EMPLOYER_DENY_FILE.read_text().splitlines()
+        if line.strip() and not line.startswith("#")
+    ]
 
 
 def _load_pii_names() -> list[tuple[str, str]] | None:

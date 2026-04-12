@@ -54,6 +54,7 @@ credentials.json
 *-credentials.json
 service-account*.json
 ai-service/scrub_patterns.yaml
+ai-service/tests/employer_deny.txt
 scripts/deny-patterns.txt
 
 # Docker logs
