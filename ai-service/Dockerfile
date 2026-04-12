@@ -6,6 +6,8 @@
 # Placeholder tag form is kept for local builds; CI should enforce the digest form.
 FROM python:3.11-slim AS model-downloader
 
+# CPU-only torch — skips ~2.5GB of NVIDIA/CUDA libs (Cloud Run is CPU-only)
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir sentence-transformers
 
 # Download the small model (33MB) — critical for fast cold starts
@@ -19,9 +21,10 @@ RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuse
 
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies — CPU-only torch first to avoid 2.5GB CUDA pull
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
+ && pip install --no-cache-dir -r requirements.txt
 
 # Copy baked model from downloader stage
 COPY --from=model-downloader /root/.cache/huggingface /home/appuser/.cache/huggingface
@@ -48,4 +51,4 @@ EXPOSE 8090
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8090/health')" || exit 1
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8090"]
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8090}
