@@ -14,9 +14,12 @@ from loader import get_resume_as_text, get_interview_patterns_as_text, get_adr_c
 
 logger = logging.getLogger(__name__)
 
-# Embedding model — runs locally, no API key needed
-# paraphrase-MiniLM-L3-v2 (33MB) baked into Docker image for fast cold starts
-EMBEDDING_MODEL = "paraphrase-MiniLM-L3-v2"
+# Embedding model — runs locally, no API key needed.
+# paraphrase-MiniLM-L3-v2 weights are vendored in ./model/ (see ADR-0001),
+# so the image never calls HuggingFace Hub at build or runtime.
+# Fallback to the hub name lets local dev work without the vendored dir.
+_MODEL_DIR = os.path.join(os.path.dirname(__file__), "model", "paraphrase-MiniLM-L3-v2")
+EMBEDDING_MODEL = _MODEL_DIR if os.path.isdir(_MODEL_DIR) else "paraphrase-MiniLM-L3-v2"
 
 # Chroma collection names — one per tier
 COLLECTION_NAME = "resume_knowledge"          # Tier 1: factual resume (always retrieved)

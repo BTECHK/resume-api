@@ -20,3 +20,14 @@ The ai-service uses paraphrase-MiniLM-L3-v2 (33MB) as its sentence embedding mod
 ## Source
 
 Authored in ai-service/adr_content.py entry #1. This ADR is the long-form version; the RAG ingested form is the short content paragraph above.
+
+## Addendum (2026-04-12): Vendored weights
+
+After ~10 Cloud Build failures caused by HuggingFace Hub rate-limiting GCP's
+shared egress IPs (the download step would stall and exceed the 30-min build
+timeout), the MiniLM weights were vendored into the repo at
+`ai-service/model/paraphrase-MiniLM-L3-v2/`. The Dockerfile `COPY`s them in
+and sets `TRANSFORMERS_OFFLINE=1` / `HF_HUB_OFFLINE=1` so `sentence-transformers`
+never calls the Hub. Trade-off: ~68MB added to the repo in exchange for
+deterministic, offline-capable builds. Model updates are a deliberate, reviewed
+action via `scripts/vendor_model.sh` rather than a silent dependency fetch.
