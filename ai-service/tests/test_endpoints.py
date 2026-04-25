@@ -32,6 +32,11 @@ def test_ask_factual_question_returns_answer(test_client, fake_gemini_client):
     assert body["model_used"] == "gemini-2.5-flash"
     assert "chunk" in body["sources"][0]
     assert "relevance" in body["sources"][0]
+    # Verify source structure: chunk is str, relevance is a float in [0, 1]
+    for src in body["sources"]:
+        assert isinstance(src["chunk"], str) and len(src["chunk"]) > 0
+        assert isinstance(src["relevance"], (int, float))
+        assert 0.0 <= src["relevance"] <= 1.0
 
 
 def test_ask_behavioral_question_triggers_interview_tier(test_client, fake_gemini_client, fake_rag):
@@ -100,6 +105,10 @@ def test_ask_gemini_failure_returns_503(test_client, fake_gemini_client):
     assert response.status_code == 503
     body = response.json()
     assert "error" in body
+    # Verify safe message — no stack trace or internal details leaked (SEC-07)
+    assert "temporarily unavailable" in body["error"].lower()
+    assert "traceback" not in body["error"].lower()
+    assert "RuntimeError" not in body["error"]
 
 
 def test_chat_single_message_works(test_client, fake_gemini_client):
@@ -161,6 +170,9 @@ def test_chat_with_history_triggers_summarization(test_client, fake_gemini_clien
     assert response.status_code == 200
     # Expect at least 2 Gemini calls: summarization + final answer
     assert len(fake_gemini_client.models.calls) >= 2
+    # Verify the summary was actually USED in the final answer prompt (D-07)
+    last_call_contents = fake_gemini_client.models.calls[-1]["contents"]
+    assert "Previous conversation summary" in last_call_contents
 
 
 def test_chat_last_message_too_long_rejected(test_client):

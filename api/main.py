@@ -1,4 +1,4 @@
-
+import logging
 import uvicorn
 import os
 import sys
@@ -11,6 +11,12 @@ import time
 import collections
 from datetime import datetime, timezone
 from typing import List, Optional
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 # Import models and database modules
 import models
@@ -45,7 +51,9 @@ def startup_event():
     Initializes the database connection and tables on application startup.
     This is the recommended way to manage resources in FastAPI.
     """
+    logger.info("Initializing database...")
     init_db()
+    logger.info("Database initialized, API ready")
 
 # --- Middleware ---
 

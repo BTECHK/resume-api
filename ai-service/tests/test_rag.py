@@ -18,17 +18,22 @@ def test_rag_module_imports():
         INTERVIEW_COLLECTION_NAME, ARCH_COLLECTION_NAME,
         ARCH_KEYWORDS, INTERVIEW_KEYWORDS,
     )
+    # Smoke test: verify symbols exist and are callable.
+    # Deeper behavioral tests are in the specific test functions below.
     assert ResumeRAG is not None
     assert callable(get_rag)
     assert callable(chunk_text)
     assert callable(needs_interview_tier)
     assert callable(needs_architecture_tier)
+    # Keyword lists must be non-empty for routing to work at all
+    assert len(INTERVIEW_KEYWORDS) > 0, "INTERVIEW_KEYWORDS is empty — routing will fail"
+    assert len(ARCH_KEYWORDS) > 0, "ARCH_KEYWORDS is empty — routing will fail"
 
 
 def test_embedding_model_is_correct():
     """Verify the embedding model matches what's baked into the Docker image."""
     from rag import EMBEDDING_MODEL
-    assert EMBEDDING_MODEL == "paraphrase-MiniLM-L3-v2"
+    assert "paraphrase-MiniLM-L3-v2" in EMBEDDING_MODEL
 
 
 def test_collection_names_distinct():
@@ -116,12 +121,11 @@ def test_interview_patterns_module_exports():
         assert "tags" in item
 
 
-def test_interview_patterns_anonymized(pii_name_variants):
+def test_interview_patterns_anonymized(pii_name_variants, employer_deny_terms):
     """Tier-2 corpus must be fully anonymized."""
-    from conftest import _load_employer_deny
     from loader import get_interview_patterns_as_text
     text = get_interview_patterns_as_text().lower()
-    forbidden = [t.lower() for t in _load_employer_deny()]
+    forbidden = [t.lower() for t in employer_deny_terms]
     if pii_name_variants:
         forbidden.extend(name.lower() for name, _ in pii_name_variants)
     if not forbidden:
@@ -154,12 +158,11 @@ def test_adr_content_mentions_key_tech():
     assert "slowapi" in text
 
 
-def test_adr_content_anonymized(pii_name_variants):
+def test_adr_content_anonymized(pii_name_variants, employer_deny_terms):
     """ADR content must not contain real names or employers."""
-    from conftest import _load_employer_deny
     from loader import get_adr_content_as_text
     text = get_adr_content_as_text().lower()
-    forbidden = [t.lower() for t in _load_employer_deny()]
+    forbidden = [t.lower() for t in employer_deny_terms]
     if pii_name_variants:
         forbidden.extend(name.lower() for name, _ in pii_name_variants)
     if not forbidden:

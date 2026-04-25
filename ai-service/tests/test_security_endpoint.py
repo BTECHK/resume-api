@@ -26,8 +26,9 @@ def test_injection_on_chat_returns_429_with_canned(test_client):
     )
     assert response.status_code == 429
     body = response.json()
+    assert "professional background" in body["answer"].lower()
     assert body["model_used"] == "none"
-    assert body["message_count"] == 1
+    assert body["sources"] == []
 
 
 def test_flagged_ip_persists_across_requests(test_client):

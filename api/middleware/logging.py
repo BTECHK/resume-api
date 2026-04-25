@@ -1,3 +1,4 @@
+import logging
 import time
 from urllib.parse import urlparse
 from starlette.background import BackgroundTask
@@ -8,6 +9,8 @@ from starlette.types import ASGIApp
 
 # Corrected import for Docker context
 from database import log_request_to_db
+
+logger = logging.getLogger(__name__)
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
@@ -57,5 +60,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             try:
                 return urlparse(referer).netloc or "direct"
             except Exception:
+                logger.warning("Failed to parse referer header: %s", referer, exc_info=True)
                 return "parsing_error"
         return "direct"

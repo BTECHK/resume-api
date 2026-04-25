@@ -26,7 +26,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, field_validator, ConfigDict
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
@@ -84,17 +84,21 @@ async def _warm_up():
     sees the port open immediately and doesn't kill the container.
     """
     global _startup_ready
-    loop = asyncio.get_running_loop()
+    try:
+        loop = asyncio.get_running_loop()
 
-    # Heavy I/O + CPU work — run in thread so we don't block the event loop
-    await loop.run_in_executor(None, get_genai_client)
-    await loop.run_in_executor(None, get_rag)
+        logger.info("Warm-up: initializing Gemini client...")
+        await loop.run_in_executor(None, get_genai_client)
+        logger.info("Warm-up: Gemini client ready, loading RAG...")
+        await loop.run_in_executor(None, get_rag)
 
-    rag = get_rag()
-    chunk_count = rag.collection.count()
-    logger.info("RAG ready with %d chunks", chunk_count)
-    _startup_ready = True
-    logger.info("AI service fully warmed up")
+        rag = get_rag()
+        chunk_count = rag.collection.count()
+        logger.info("RAG ready with %d chunks", chunk_count)
+        _startup_ready = True
+        logger.info("AI service fully warmed up")
+    except Exception as exc:
+        logger.error("Warm-up FAILED — service will stay in warming_up state: %s", exc, exc_info=True)
 
 
 @asynccontextmanager
@@ -119,7 +123,15 @@ app = FastAPI(
 
 # Rate limiting
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+async def _rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    client_ip = get_remote_address(request)
+    logger.warning("Rate limit exceeded | ip=%s | path=%s", client_ip, request.url.path)
+    return safe_error_response(429)
+
+
+app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
 
 # CORS — per SEC-06, locked to specific origins via env var
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "*").split(",")
@@ -411,8 +423,8 @@ async def chat(request: Request, body: ChatRequest):
                 ),
             )
             conversation_summary = summary_response.text
-        except Exception:
-            # If summarization fails, just truncate
+        except Exception as exc:
+            logger.warning("Gemini summarization failed, falling back to truncation: %s", type(exc).__name__, exc_info=True)
             conversation_summary = older_text[:300]
 
         recent_messages = messages[-3:]

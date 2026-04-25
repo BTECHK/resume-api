@@ -27,6 +27,12 @@ def _load_employer_deny() -> list[str]:
     ]
 
 
+@pytest.fixture
+def employer_deny_terms():
+    """Employer deny list from tests/employer_deny.txt. Empty list if file absent."""
+    return _load_employer_deny()
+
+
 def _load_pii_names() -> list[tuple[str, str]] | None:
     if not _SCRUB_PATTERNS_FILE.exists():
         return None

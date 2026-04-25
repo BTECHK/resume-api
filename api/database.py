@@ -1,6 +1,8 @@
-
+import logging
 import sqlite3
 import os
+
+logger = logging.getLogger(__name__)
 
 # Use a separate database for live query data
 DATABASE_FILE = "data/queries.db"
@@ -62,24 +64,26 @@ def log_request_to_db(data: dict):
     Inserts a single request log entry into the 'queries' table.
     This function is designed to be called from a background task.
     """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # The order of keys in the data dictionary must match the insert statement
-    # The 'synced_to_bq' and 'created_at' columns have default values
-    cursor.execute("""
-        INSERT INTO queries (
-            timestamp, method, path, query_params, recruiter_domain,
-            user_agent, client_ip, status_code, response_time_ms,
-            session_id, search_campaign, traffic_source, funnel_stage,
-            device_type, geo_region
-        ) VALUES (
-            :timestamp, :method, :path, :query_params, :recruiter_domain,
-            :user_agent, :client_ip, :status_code, :response_time_ms,
-            :session_id, :search_campaign, :traffic_source, :funnel_stage,
-            :device_type, :geo_region
-        )
-    """, data)
-
-    conn.commit()
-    conn.close()
+    conn = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO queries (
+                timestamp, method, path, query_params, recruiter_domain,
+                user_agent, client_ip, status_code, response_time_ms,
+                session_id, search_campaign, traffic_source, funnel_stage,
+                device_type, geo_region
+            ) VALUES (
+                :timestamp, :method, :path, :query_params, :recruiter_domain,
+                :user_agent, :client_ip, :status_code, :response_time_ms,
+                :session_id, :search_campaign, :traffic_source, :funnel_stage,
+                :device_type, :geo_region
+            )
+        """, data)
+        conn.commit()
+    except Exception as exc:
+        logger.error("Failed to log request to DB: %s", type(exc).__name__, exc_info=True)
+    finally:
+        if conn:
+            conn.close()

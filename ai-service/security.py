@@ -101,9 +101,13 @@ _EXAMPLE_FILE = Path(__file__).parent / "scrub_patterns.example.yaml"
 
 
 def _load_name_scrub_patterns() -> list[tuple[re.Pattern, str]]:
-    f = _PATTERNS_FILE if _PATTERNS_FILE.exists() else _EXAMPLE_FILE
-    raw = yaml.safe_load(f.read_text()) or {}
-    return [(re.compile(p, re.IGNORECASE), r) for p, r in raw.items()]
+    try:
+        f = _PATTERNS_FILE if _PATTERNS_FILE.exists() else _EXAMPLE_FILE
+        raw = yaml.safe_load(f.read_text()) or {}
+        return [(re.compile(p, re.IGNORECASE), r) for p, r in raw.items()]
+    except Exception as exc:
+        logger.warning("Failed to load scrub patterns from %s: %s", f, type(exc).__name__, exc_info=True)
+        return []
 
 
 RESPONSE_SCRUB_PATTERNS = [
